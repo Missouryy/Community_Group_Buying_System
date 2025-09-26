@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>个人资料 - 社区团购</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/apple-theme.css" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/index.html">社区团购</a>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">会员中心</h5>
+                        <div id="member-tier" class="mb-2 fw-semibold"></div>
+                        <div class="text-muted small mb-2">当前积分：<span id="member-points">0</span></div>
+                        <div class="mb-2">
+                            <div class="progress"><div id="member-progress" class="progress-bar" style="width:0%">0%</div></div>
+                            <div class="text-muted small mt-1">距离下一等级还需 <span id="points-to-next">0</span> 分</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script>
+      async function loadProfile() {
+        const tokens = window.api.getTokens();
+        if (!tokens.access) { window.location.href = '/login.html'; return; }
+        const [meRes, tiersRes] = await Promise.all([
+          window.api.fetchAPI('/api/users/me/'),
+          window.api.fetchAPI('/api/memberships/tiers/')
+        ]);
+        if (!meRes.ok || !tiersRes.ok) return;
+        const me = await meRes.json();
+        const tiers = await tiersRes.json();
+        const tierName = me.membership_tier?.tier_name || '普通会员';
+        const points = me.loyalty_points || 0;
+        const currentRequired = me.membership_tier?.points_required || 0;
+        const nextTier = tiers.find(t => t.points_required > currentRequired);
+        const target = nextTier ? nextTier.points_required : currentRequired || 1;
+        const ratio = Math.min(100, Math.round((points / target) * 100));
+
+        document.getElementById('member-tier').textContent = tierName;
+        document.getElementById('member-points').textContent = points;
+        document.getElementById('member-progress').style.width = ratio + '%';
+        document.getElementById('member-progress').textContent = ratio + '%';
+        document.getElementById('points-to-next').textContent = Math.max(0, target - points);
+      }
+      document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>
+
+
