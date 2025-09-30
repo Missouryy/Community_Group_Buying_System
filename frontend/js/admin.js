@@ -14,12 +14,51 @@
     const data = await res.json();
     const tbody = productsTableBody();
     tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5">
+        <div class="mb-3" style="font-size: 3rem;">📦</div>
+        <div class="text-muted">暂无商品数据</div>
+        <div class="text-muted small mt-1">点击上方"添加新商品"按钮开始添加</div>
+      </td></tr>`;
+      return;
+    }
+    
     data.forEach(p => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${p.id}</td><td>${p.name}</td><td>${p.price}</td><td>${p.stock_quantity}</td>
-        <td>
-          <button class="btn btn-sm btn-secondary me-2" data-action="edit" data-id="${p.id}">编辑</button>
-          <button class="btn btn-sm btn-danger" data-action="delete" data-id="${p.id}">删除</button>
+      tr.style.cssText = 'transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0;';
+      
+      // 库存状态判断
+      const stockClass = p.stock_quantity <= 10 ? 'danger' : p.stock_quantity <= 50 ? 'warning' : 'success';
+      const stockIcon = p.stock_quantity <= 10 ? '⚠️' : p.stock_quantity <= 50 ? '⚡' : '✅';
+      
+      tr.innerHTML = `
+        <td class="px-4 py-3">
+          <span class="fw-semibold text-primary" style="font-family: 'SF Mono', Monaco, monospace;">#${p.id}</span>
+        </td>
+        <td class="px-4 py-3">
+          <div class="fw-semibold" style="color: #1d1d1f;">${p.name}</div>
+          ${p.description ? `<div class="text-muted small" style="font-size: 0.8rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.description}</div>` : ''}
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="fw-bold" style="color: #34C759; font-size: 1rem;">¥${parseFloat(p.price).toFixed(2)}</span>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="badge text-bg-${stockClass}" style="font-size: 0.85rem; padding: 0.4rem 0.75rem;">
+            ${stockIcon} ${p.stock_quantity}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-sm btn-outline-primary" data-action="edit" data-id="${p.id}" 
+                    style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
+              编辑
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${p.id}"
+                    style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
+              删除
+            </button>
+          </div>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -42,21 +81,51 @@
 
   async function saveProduct() {
     const id = document.getElementById('product-id').value;
+    const name = document.getElementById('product-name').value.trim();
+    const price = document.getElementById('product-price').value;
+    const stock = document.getElementById('product-stock').value;
+    
+    // 表单验证
+    if (!name) {
+      alert('请输入商品名称');
+      return;
+    }
+    if (!price || parseFloat(price) <= 0) {
+      alert('请输入有效的商品价格');
+      return;
+    }
+    if (!stock || parseInt(stock, 10) < 0) {
+      alert('请输入有效的库存数量');
+      return;
+    }
+    
     const form = new FormData();
-    form.append('name', document.getElementById('product-name').value);
-    form.append('price', String(parseFloat(document.getElementById('product-price').value)));
-    form.append('stock_quantity', String(parseInt(document.getElementById('product-stock').value, 10)));
+    form.append('name', name);
+    form.append('price', String(parseFloat(price)));
+    form.append('stock_quantity', String(parseInt(stock, 10)));
     const file = document.getElementById('product-image').files[0];
     if (file) form.append('image', file);
-    let res;
-    if (id) {
-      res = await window.api.fetchAPI(`/api/admin/products/${id}/`, { method: 'PUT', body: form });
-    } else {
-      res = await window.api.fetchAPI('/api/admin/products/', { method: 'POST', body: form });
-    }
-    if (res.ok) {
-      modal.hide();
-      loadProducts();
+    
+    try {
+      let res;
+      if (id) {
+        res = await window.api.fetchAPI(`/api/admin/products/${id}/`, { method: 'PUT', body: form });
+      } else {
+        res = await window.api.fetchAPI('/api/admin/products/', { method: 'POST', body: form });
+      }
+      
+      if (res.ok) {
+        alert(id ? '商品更新成功！' : '商品添加成功！');
+        modal.hide();
+        loadProducts();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.detail || errorData.message || '操作失败，请重试';
+        alert(`错误：${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('保存商品时出错:', error);
+      alert('网络错误，请检查连接后重试');
     }
   }
 
@@ -78,7 +147,61 @@
       }
     });
 
-    // 页面导航现在由统一导航系统处理
+    // 页面内标签切换（支持左侧导航）
+    document.querySelectorAll('.sidebar-nav .nav-link, .page-tabs .nav-link')?.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = tab.getAttribute('data-page');
+        const pageId = 'page-' + page;
+        
+        // 隐藏所有页面
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        
+        // 显示目标页面
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+          targetPage.style.display = '';
+        }
+        
+        // 更新标签激活状态（支持左侧导航）
+        document.querySelectorAll('.sidebar-nav .nav-link, .page-tabs .nav-link').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // 加载对应数据
+        if (page === 'dashboard') loadDashboard();
+        else if (page === 'orders') loadOrders();
+        else if (page === 'products') loadProducts();
+        else if (page === 'leaders') loadLeaderApplications();
+        else if (page === 'inventory') loadAlerts();
+      });
+    });
+    
+    // 订单筛选和搜索
+    const filterElement = document.getElementById('order-status-filter');
+    const searchElement = document.getElementById('order-search');
+    
+    if (filterElement) {
+      filterElement.addEventListener('change', (e) => {
+        console.log('订单状态筛选器改变:', e.target.value);
+        loadOrders();
+      });
+    }
+    
+    if (searchElement) {
+      searchElement.addEventListener('input', debounce(() => {
+        console.log('订单搜索输入:', searchElement.value);
+        loadOrders();
+      }, 500));
+    }
+  }
+  
+  // 防抖函数
+  function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
   }
 
   async function loadDashboard() {
@@ -174,9 +297,10 @@
     
     if (data.length === 0) {
       container.innerHTML = `
-        <div class="community-highlight">
-          <h6>👥 暂无团长申请</h6>
-          <p class="text-muted mb-0">当有用户申请成为团长时，审核信息将显示在这里</p>
+        <div class="border rounded-3 p-4 text-center">
+          <div class="fs-3 mb-2">👥</div>
+          <div class="fw-semibold mb-1">暂无团长申请</div>
+          <div class="text-muted small">当有用户申请成为团长时，审核信息将显示在这里</div>
         </div>`;
       return;
     }
@@ -270,52 +394,61 @@
       const approvedSection = document.createElement('div');
       approvedSection.innerHTML = `
         <h6 class="mb-3">✅ 已批准团长 (${approvedLeaders.length})</h6>
-        <div class="table-responsive">
-          <table class="table table-borderless">
-            <thead>
-              <tr class="bg-light">
-                <th>团长信息</th>
-                <th>拼单数</th>
-                <th>月收益</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="approved-leaders-tbody"></tbody>
-          </table>
+        <div class="card shadow-community">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-apple" style="border-collapse: separate; border-spacing: 0;">
+              <thead>
+                <tr>
+                  <th class="px-4 py-3 fw-semibold" style="border-top-left-radius: 12px;">团长信息</th>
+                  <th class="px-4 py-3 fw-semibold text-center">拼单数</th>
+                  <th class="px-4 py-3 fw-semibold text-center">月收益</th>
+                  <th class="px-4 py-3 fw-semibold text-center">状态</th>
+                  <th class="px-4 py-3 fw-semibold text-center" style="border-top-right-radius: 12px;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="approved-leaders-tbody"></tbody>
+            </table>
+          </div>
         </div>`;
       container.appendChild(approvedSection);
       
       const tbody = document.getElementById('approved-leaders-tbody');
       approvedLeaders.forEach(u => {
         const tr = document.createElement('tr');
+        tr.style.cssText = 'transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0;';
         tr.innerHTML = `
-          <td>
+          <td class="px-4 py-3">
             <div class="d-flex align-items-center">
-              <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px">
-                <span class="text-success">👑</span>
+              <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width:44px;height:44px">
+                <span class="text-success" style="font-size: 1.25rem;">👑</span>
               </div>
               <div>
-                <div class="fw-semibold">${u.real_name || u.username}</div>
-                <div class="text-muted small">${u.email || '无邮箱'}</div>
+                <div class="fw-semibold" style="color: #1d1d1f;">${u.real_name || u.username}</div>
+                <div class="text-muted small" style="font-size: 0.8rem;">${u.email || '无邮箱'}</div>
               </div>
             </div>
           </td>
-          <td>
-            <div class="fw-semibold">${u.groupbuy_count || 0}</div>
-            <div class="text-muted small">个拼单</div>
+          <td class="px-4 py-3 text-center">
+            <div class="fw-bold" style="font-size: 1.1rem; color: #1d1d1f;">${u.groupbuy_count || 0}</div>
+            <div class="text-muted small" style="font-size: 0.8rem;">个拼单</div>
           </td>
-          <td>
-            <div class="fw-semibold text-success">¥${u.monthly_commission || 0}</div>
-            <div class="text-muted small">本月</div>
+          <td class="px-4 py-3 text-center">
+            <div class="fw-bold" style="font-size: 1.1rem; color: #34C759;">¥${u.monthly_commission || 0}</div>
+            <div class="text-muted small" style="font-size: 0.8rem;">本月</div>
           </td>
-          <td>
-            <span class="badge text-bg-success">活跃</span>
+          <td class="px-4 py-3 text-center">
+            <span class="badge text-bg-success" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">✅ 活跃</span>
           </td>
-          <td>
-            <div class="d-flex gap-1">
-              <button class="btn btn-outline-primary btn-sm" data-view-details="${u.id}">详情</button>
-              <button class="btn btn-outline-danger btn-sm" data-deactivate="${u.id}">停用</button>
+          <td class="px-4 py-3 text-center">
+            <div class="d-flex gap-2 justify-content-center">
+              <button class="btn btn-sm btn-outline-primary" data-view-details="${u.id}"
+                      style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
+                详情
+              </button>
+              <button class="btn btn-sm btn-outline-danger" data-deactivate="${u.id}"
+                      style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
+                停用
+              </button>
             </div>
           </td>`;
         tbody.appendChild(tr);
@@ -477,8 +610,362 @@
     modal.addEventListener('hidden.bs.modal', () => modal.remove());
   }
 
+  // 订单管理功能
+  async function loadOrders(page = 1) {
+    // 如果传入的是事件对象，重置为页码1
+    if (typeof page === 'object') {
+      page = 1;
+    }
+    
+    const tbody = document.querySelector('#orders-table tbody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        <span class="text-muted">正在加载订单...</span>
+      </td></tr>`;
+    }
+    
+    const statusFilter = document.getElementById('order-status-filter')?.value || '';
+    const search = document.getElementById('order-search')?.value || '';
+    
+    const params = new URLSearchParams({
+      page: page,
+      page_size: 20
+    });
+    
+    if (statusFilter) params.append('status', statusFilter);
+    if (search) params.append('search', search);
+    
+    try {
+      const res = await window.api.fetchAPI(`/api/admin/orders/?${params.toString()}`);
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData.detail || errorData.error || errorData.message || errorMsg;
+        } catch (e) {
+          const errorText = await res.text().catch(() => '');
+          if (errorText) errorMsg = errorText;
+        }
+        console.error('订单加载失败:', res.status, errorMsg);
+        const tbody = document.querySelector('#orders-table tbody');
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">
+            <div class="mb-2">❌ 加载订单失败</div>
+            <div class="text-muted small">错误信息: ${errorMsg}</div>
+            <div class="text-muted small mt-1">请检查您的管理员权限或联系系统管理员</div>
+          </td></tr>`;
+        }
+        return;
+      }
+      
+      const data = await res.json();
+      const tbody = document.querySelector('#orders-table tbody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      // 检查是否有results字段
+      const orders = data.results || data || [];
+      
+      if (orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5">
+          <div class="mb-3" style="font-size: 3rem;">📦</div>
+          <div class="text-muted">暂无订单数据</div>
+          <div class="text-muted small mt-1">当用户下单后，订单信息将显示在这里</div>
+        </td></tr>`;
+        // 清空分页
+        const paginationContainer = document.getElementById('orders-pagination');
+        if (paginationContainer) paginationContainer.innerHTML = '';
+        return;
+      }
+    
+    orders.forEach((order, index) => {
+      const statusBadges = {
+        'pending_payment': '<span class="badge text-bg-warning" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">💳 待支付</span>',
+        'awaiting_group_success': '<span class="badge text-bg-info" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">⏳ 待成团</span>',
+        'successful': '<span class="badge text-bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">✅ 已成团</span>',
+        'ready_for_pickup': '<span class="badge text-bg-primary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">📦 待提货</span>',
+        'completed': '<span class="badge text-bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">🎉 已完成</span>',
+        'canceled': '<span class="badge text-bg-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">❌ 已取消</span>'
+      };
+      
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0;';
+      tr.innerHTML = `
+        <td class="px-4 py-3">
+          <span class="fw-semibold text-primary" style="font-family: 'SF Mono', Monaco, monospace;">#${order.id}</span>
+        </td>
+        <td class="px-4 py-3">
+          <div class="fw-semibold" style="color: #1d1d1f;">${order.user_name}</div>
+          <div class="text-muted small" style="font-size: 0.8rem;">${order.user_phone || '无电话'}</div>
+        </td>
+        <td class="px-4 py-3">
+          <span style="color: #1d1d1f;">${order.product_name}</span>
+        </td>
+        <td class="px-4 py-3">
+          <span class="text-muted">${order.leader_name}</span>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="badge bg-light text-dark" style="font-size: 0.85rem; padding: 0.4rem 0.75rem;">${order.quantity}</span>
+        </td>
+        <td class="px-4 py-3">
+          <span class="fw-bold" style="color: #34C759; font-size: 1rem;">¥${parseFloat(order.total_price).toFixed(2)}</span>
+        </td>
+        <td class="px-4 py-3 text-center">${statusBadges[order.status] || order.status}</td>
+        <td class="px-4 py-3">
+          <div class="text-muted small" style="font-size: 0.8rem; line-height: 1.4;">
+            ${new Date(order.created_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}<br>
+            ${new Date(order.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-sm btn-outline-primary" data-view-order="${order.id}" style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
+              详情
+            </button>
+            ${order.status !== 'canceled' && order.status !== 'completed' ? 
+              `<button class="btn btn-sm btn-outline-danger" data-cancel-order="${order.id}" style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">取消</button>` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+      // 分页
+      renderOrdersPagination(data.total || orders.length, data.page || page, data.page_size || 20);
+    } catch (error) {
+      console.error('加载订单出错:', error);
+      const tbody = document.querySelector('#orders-table tbody');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">
+          网络错误: ${error.message}
+        </td></tr>`;
+      }
+    }
+  }
+  
+  function renderOrdersPagination(total, currentPage, pageSize) {
+    const container = document.getElementById('orders-pagination');
+    if (!container) return;
+    
+    const totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+    
+    let html = '<nav aria-label="订单分页"><ul class="pagination pagination-apple" style="gap: 0.5rem;">';
+    
+    // 上一页
+    const prevDisabled = currentPage === 1;
+    html += `<li class="page-item ${prevDisabled ? 'disabled' : ''}">
+      <a class="page-link" href="#" data-order-page="${currentPage - 1}" 
+         style="border-radius: 10px; padding: 0.5rem 1rem; border: 1px solid #e0e0e0; ${prevDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+        ← 上一页
+      </a>
+    </li>`;
+    
+    // 页码
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    // 第一页（如果不在可见范围内）
+    if (startPage > 1) {
+      html += `<li class="page-item">
+        <a class="page-link" href="#" data-order-page="1" 
+           style="border-radius: 10px; padding: 0.5rem 0.875rem; border: 1px solid #e0e0e0; min-width: 42px; text-align: center;">
+          1
+        </a>
+      </li>`;
+      if (startPage > 2) {
+        html += `<li class="page-item disabled">
+          <span class="page-link" style="border: none; background: none;">...</span>
+        </li>`;
+      }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      const isActive = i === currentPage;
+      html += `<li class="page-item ${isActive ? 'active' : ''}">
+        <a class="page-link" href="#" data-order-page="${i}" 
+           style="border-radius: 10px; padding: 0.5rem 0.875rem; min-width: 42px; text-align: center; 
+                  border: 1px solid ${isActive ? '#34C759' : '#e0e0e0'}; 
+                  background: ${isActive ? 'linear-gradient(135deg, #34C759 0%, #30D158 100%)' : 'white'}; 
+                  color: ${isActive ? 'white' : '#1d1d1f'}; 
+                  font-weight: ${isActive ? '600' : '500'};">
+          ${i}
+        </a>
+      </li>`;
+    }
+    
+    // 最后一页（如果不在可见范围内）
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        html += `<li class="page-item disabled">
+          <span class="page-link" style="border: none; background: none;">...</span>
+        </li>`;
+      }
+      html += `<li class="page-item">
+        <a class="page-link" href="#" data-order-page="${totalPages}" 
+           style="border-radius: 10px; padding: 0.5rem 0.875rem; border: 1px solid #e0e0e0; min-width: 42px; text-align: center;">
+          ${totalPages}
+        </a>
+      </li>`;
+    }
+    
+    // 下一页
+    const nextDisabled = currentPage === totalPages;
+    html += `<li class="page-item ${nextDisabled ? 'disabled' : ''}">
+      <a class="page-link" href="#" data-order-page="${currentPage + 1}" 
+         style="border-radius: 10px; padding: 0.5rem 1rem; border: 1px solid #e0e0e0; ${nextDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+        下一页 →
+      </a>
+    </li>`;
+    
+    html += '</ul></nav>';
+    
+    // 添加统计信息
+    html += `<div class="text-center text-muted small mt-2" style="font-size: 0.875rem;">
+      显示第 ${((currentPage - 1) * pageSize) + 1} - ${Math.min(currentPage * pageSize, total)} 条，共 ${total} 条订单
+    </div>`;
+    
+    container.innerHTML = html;
+  }
+  
+  // 处理订单操作
+  document.addEventListener('click', async (e) => {
+    // 查看订单详情
+    const viewBtn = e.target.closest('button[data-view-order]');
+    if (viewBtn) {
+      const orderId = viewBtn.getAttribute('data-view-order');
+      await showOrderDetails(orderId);
+    }
+    
+    // 取消订单
+    const cancelBtn = e.target.closest('button[data-cancel-order]');
+    if (cancelBtn) {
+      const orderId = cancelBtn.getAttribute('data-cancel-order');
+      if (confirm('确认取消该订单？')) {
+        const res = await window.api.fetchAPI(`/api/admin/orders/${orderId}/cancel/`, { method: 'POST' });
+        if (res.ok) {
+          alert('订单已取消');
+          loadOrders();
+        } else {
+          alert('取消订单失败');
+        }
+      }
+    }
+    
+    // 分页点击
+    const pageLink = e.target.closest('a[data-order-page]');
+    if (pageLink) {
+      e.preventDefault();
+      const page = parseInt(pageLink.getAttribute('data-order-page'));
+      loadOrders(page);
+    }
+  });
+  
+  // 显示订单详情
+  async function showOrderDetails(orderId) {
+    const res = await window.api.fetchAPI(`/api/admin/orders/${orderId}/`);
+    if (!res.ok) {
+      alert('获取订单详情失败');
+      return;
+    }
+    
+    const order = await res.json();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">订单详情 #${order.id}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">用户信息</h6>
+                    <div class="vstack gap-2">
+                      <div><strong>姓名：</strong>${order.user.real_name || order.user.username}</div>
+                      <div><strong>电话：</strong>${order.user.phone || '未设置'}</div>
+                      <div><strong>邮箱：</strong>${order.user.email || '未设置'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">订单信息</h6>
+                    <div class="vstack gap-2">
+                      <div><strong>商品：</strong>${order.group_buy.product_name}</div>
+                      <div><strong>团长：</strong>${order.group_buy.leader_name}</div>
+                      <div><strong>数量：</strong>${order.quantity}</div>
+                      <div><strong>总价：</strong>¥${order.total_price}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">支付信息</h6>
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <div><strong>支付状态：</strong>${order.payment_status}</div>
+                      </div>
+                      <div class="col-md-4">
+                        <div><strong>支付方式：</strong>${order.payment_method || '未支付'}</div>
+                      </div>
+                      <div class="col-md-4">
+                        <div><strong>支付时间：</strong>${order.payment_time ? new Date(order.payment_time).toLocaleString('zh-CN') : '未支付'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              ${order.pickup_address ? `
+                <div class="col-12">
+                  <div class="card">
+                    <div class="card-body">
+                      <h6 class="card-title">提货地址</h6>
+                      <p class="mb-0">${order.pickup_address}</p>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    modal.addEventListener('hidden.bs.modal', () => modal.remove());
+  }
+
   // 暴露函数到全局作用域，供统一导航系统调用
   window.loadDashboard = loadDashboard;
+  window.loadOrders = loadOrders;
   window.loadProducts = loadProducts;
   window.loadLeaderApplications = loadLeaderApplications;
   window.loadAlerts = loadAlerts;

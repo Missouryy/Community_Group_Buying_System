@@ -4,7 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Sum
 from django.utils import timezone
+from decimal import Decimal
 from .models import User, Order, Product, GroupBuy
+from .serializers import MembershipTierSerializer
 
 
 class UserApplyLeaderView(APIView):
@@ -14,6 +16,21 @@ class UserApplyLeaderView(APIView):
     def post(self, request):
         try:
             user = request.user
+            
+            # 管理员不能申请成为团长
+            if user.role == 'admin':
+                return Response({
+                    'error': '管理员不能申请成为团长',
+                    'detail': '管理员账户已拥有最高权限，无需申请团长角色'
+                }, status=400)
+            
+            # 如果已经是团长，不能重复申请
+            if user.role == 'leader':
+                return Response({
+                    'error': '您已经是团长了',
+                    'detail': '无需重复申请'
+                }, status=400)
+            
             phone = request.data.get('phone')
             address = request.data.get('address')
             reason = request.data.get('reason', '')
@@ -66,18 +83,18 @@ class EnhancedMeView(APIView):
             ).count()
             
             # 计算总节省金额（估算）
-            user_orders = Order.objects.filter(
-                user=user,
-                status__in=['successful', 'completed']
-            ).select_related('group_buy__product')
-            
-            total_savings = 0
+            # 假设原价 = 拼单价 * 1.2，则每件节省 = 拼单价 * 0.2
+            user_orders = (
+                Order.objects
+                .filter(user=user, status__in=['successful', 'completed'])
+                .prefetch_related('items', 'items__product')
+            )
+            total_savings = Decimal('0')
             for order in user_orders:
-                if order.group_buy.product:
-                    # 假设原价比拼单价高20%
-                    original_price = order.group_buy.product.price * 1.2
-                    savings_per_item = original_price - order.group_buy.product.price
-                    total_savings += savings_per_item * order.quantity
+                for item in order.items.all():
+                    product_price = getattr(item.product, 'price', 0) or Decimal('0')
+                    savings_per_unit = product_price * Decimal('0.2')
+                    total_savings += savings_per_unit * Decimal(str(item.quantity or 0))
             
             # 计算加入天数
             join_days = (timezone.now().date() - user.date_joined.date()).days
@@ -91,10 +108,11 @@ class EnhancedMeView(APIView):
                 'address': getattr(user, 'address', ''),
                 'role': user.role,
                 'leader_status': getattr(user, 'leader_status', None),
+                'application_reason': getattr(user, 'application_reason', ''),
                 'rejection_reason': getattr(user, 'rejection_reason', ''),
                 'date_joined': user.date_joined.isoformat(),
                 'loyalty_points': getattr(user, 'loyalty_points', 0),
-                'membership_tier': getattr(user, 'membership_tier', None),
+                'membership_tier': MembershipTierSerializer(getattr(user, 'membership_tier', None)).data if getattr(user, 'membership_tier', None) else None,
                 'total_orders': total_orders,
                 'total_savings': f"{total_savings:.2f}",
                 'join_days': join_days

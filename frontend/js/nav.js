@@ -1,5 +1,5 @@
 /**
- * 统一导航系统 - Apple 风格社区团购导航
+ * 统一导航系统
  */
 window.navSystem = (function() {
   
@@ -11,36 +11,16 @@ window.navSystem = (function() {
         { label: '首页', href: '/index.html', icon: '🏠', active: ['/', '/index.html'] }
       ],
       user: [
-        { label: '首页', href: '/index.html', icon: '🏠', active: ['/', '/index.html'] },
         { label: '我的订单', href: '/orders.html', icon: '📋', active: ['/orders.html'] },
         { label: '个人中心', href: '/profile.html', icon: '👤', active: ['/profile.html'] }
       ],
       leader: [
-        { label: '首页', href: '/index.html', icon: '🏠', active: ['/', '/index.html'] },
         { label: '团长门户', href: '/leader.html', icon: '👑', active: ['/leader.html'] },
-        { label: '我的订单', href: '/orders.html', icon: '📋', active: ['/orders.html'] },
         { label: '个人中心', href: '/profile.html', icon: '👤', active: ['/profile.html'] }
       ],
       admin: [
-        { label: '管理仪表盘', href: '/admin.html', icon: '⚙️', active: ['/admin.html'] },
-        { label: '订单管理', href: '/orders.html', icon: '📋', active: ['/orders.html'] },
+        { label: '管理后台', href: '/admin.html', icon: '⚙️', active: ['/admin.html'] },
         { label: '个人中心', href: '/profile.html', icon: '👤', active: ['/profile.html'] }
-      ]
-    },
-    
-    // 页面内导航配置（用于单页应用导航）
-    pageNavs: {
-      '/leader.html': [
-        { label: '仪表盘', page: 'dashboard', icon: '📊' },
-        { label: '拼单管理', page: 'groupbuys', icon: '🛒' },
-        { label: '提货管理', page: 'pickups', icon: '📦' },
-        { label: '提成明细', page: 'commissions', icon: '💰' }
-      ],
-      '/admin.html': [
-        { label: '管理仪表盘', page: 'dashboard', icon: '📊' },
-        { label: '商品管理', page: 'products', icon: '🛍️' },
-        { label: '团长管理', page: 'leaders', icon: '👑' },
-        { label: '库存预警', page: 'inventory', icon: '⚠️' }
       ]
     }
   };
@@ -82,7 +62,6 @@ window.navSystem = (function() {
     const role = getUserRole();
     const menuItems = NAV_CONFIG.menus[role] || NAV_CONFIG.menus.anonymous;
     const currentPath = getCurrentPath();
-    const pageNavItems = NAV_CONFIG.pageNavs[currentPath] || [];
     
     // 主导航链接
     const mainNavHTML = menuItems.map(item => {
@@ -95,23 +74,8 @@ window.navSystem = (function() {
       `;
     }).join('');
 
-    // 页面内导航（如果存在）
-    const pageNavHTML = pageNavItems.length > 0 ? `
-      <div class="nav-apple__divider"></div>
-      ${pageNavItems.map(item => `
-        <a class="nav-link" href="#" data-page="${item.page}">
-          <span class="nav-apple__link-icon">${item.icon}</span>
-          ${item.label}
-        </a>
-      `).join('')}
-    ` : '';
-
     // 用户操作按钮
     const userActionsHTML = generateUserActionsHTML(role);
-
-    // WebSocket 状态（仅首页显示）
-    const websocketStatusHTML = currentPath === '/' || currentPath === '/index.html' ? 
-      '<div id="websocket-status" class="nav-apple__status"></div>' : '';
 
     return `
       <nav class="navbar navbar-expand-lg nav-apple sticky-top">
@@ -133,11 +97,9 @@ window.navSystem = (function() {
           <div class="collapse navbar-collapse" id="navbarNav">
             <div class="navbar-nav me-auto nav-apple__links">
               ${mainNavHTML}
-              ${pageNavHTML}
             </div>
             
             <div class="nav-apple__actions">
-              ${websocketStatusHTML}
               ${userActionsHTML}
             </div>
           </div>
@@ -159,8 +121,8 @@ window.navSystem = (function() {
     }
 
     const roleSpecificButtons = {
-      admin: '<a class="btn btn-outline-light me-2" href="/admin.html"><span class="me-1">⚙️</span>管理后台</a>',
-      leader: '<a class="btn btn-outline-light me-2" href="/leader.html"><span class="me-1">👑</span>团长门户</a>',
+      admin: '',  // 管理员导航栏已有管理后台链接，不需要重复按钮
+      leader: '',  // 团长导航栏已有团长门户链接，不需要重复按钮
       user: ''
     };
 
@@ -184,34 +146,8 @@ window.navSystem = (function() {
   }
 
   /**
-   * 处理页面内导航点击
+   * 页面内导航切换现在由各页面自己处理
    */
-  function handlePageNavClick(e) {
-    const target = e.target.closest('[data-page]');
-    if (!target) return;
-    
-    e.preventDefault();
-    const page = target.getAttribute('data-page');
-    const pageId = 'page-' + page;
-    
-    // 隐藏所有页面
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    
-    // 显示目标页面
-    const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-      targetPage.style.display = '';
-    }
-    
-    // 更新导航激活状态
-    document.querySelectorAll('[data-page]').forEach(nav => nav.classList.remove('active'));
-    target.classList.add('active');
-    
-    // 触发页面加载事件
-    window.dispatchEvent(new CustomEvent('pageNavigation', { 
-      detail: { page, pageId } 
-    }));
-  }
 
   /**
    * 绑定事件监听器
@@ -224,9 +160,6 @@ window.navSystem = (function() {
         handleLogout();
       }
     });
-
-    // 页面内导航
-    document.addEventListener('click', handlePageNavClick);
 
     // 移动端导航折叠处理
     document.addEventListener('click', (e) => {
@@ -261,15 +194,6 @@ window.navSystem = (function() {
     
     // 绑定事件
     bindEvents();
-    
-    // 设置默认激活页面（针对页面内导航）
-    const currentPath = getCurrentPath();
-    if (NAV_CONFIG.pageNavs[currentPath]) {
-      const firstPageNav = document.querySelector('[data-page]');
-      if (firstPageNav) {
-        firstPageNav.classList.add('active');
-      }
-    }
   }
 
   /**
@@ -283,73 +207,11 @@ window.navSystem = (function() {
     }
   }
 
-  /**
-   * 设置WebSocket状态
-   */
-  function setWebSocketStatus(status, message) {
-    const statusElement = document.getElementById('websocket-status');
-    if (statusElement) {
-      if (status === 'connected') {
-        statusElement.innerHTML = `
-          <span class="text-success">
-            <span class="nav-apple__status-indicator"></span>
-            ${message || '实时连接'}
-          </span>
-        `;
-      } else {
-        statusElement.innerHTML = `
-          <span class="text-muted">
-            <span class="nav-apple__status-indicator offline"></span>
-            ${message || '连接断开'}
-          </span>
-        `;
-      }
-    }
-  }
-
-  // 监听页面导航事件，用于各页面的特定处理
-  window.addEventListener('pageNavigation', (e) => {
-    const { page, pageId } = e.detail;
-    
-    // 根据页面类型调用相应的加载函数
-    if (window.location.pathname === '/leader.html') {
-      switch (page) {
-        case 'dashboard':
-          if (window.loadLeaderDashboard) window.loadLeaderDashboard();
-          break;
-        case 'groupbuys':
-          if (window.loadGroupBuys) window.loadGroupBuys();
-          break;
-        case 'pickups':
-          if (window.loadPickupManagement) window.loadPickupManagement();
-          break;
-        case 'commissions':
-          if (window.loadCommissions) window.loadCommissions();
-          break;
-      }
-    } else if (window.location.pathname === '/admin.html') {
-      switch (page) {
-        case 'dashboard':
-          if (window.loadDashboard) window.loadDashboard();
-          break;
-        case 'products':
-          if (window.loadProducts) window.loadProducts();
-          break;
-        case 'leaders':
-          if (window.loadLeaderApplications) window.loadLeaderApplications();
-          break;
-        case 'inventory':
-          if (window.loadAlerts) window.loadAlerts();
-          break;
-      }
-    }
-  });
 
   // 公共接口
   return {
     init,
     updateNavigation,
-    setWebSocketStatus,
     getUserRole,
     getCurrentPath
   };

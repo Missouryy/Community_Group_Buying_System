@@ -171,3 +171,29 @@ class LeaderCommissionsView(APIView):
             return Response(results)
         except Exception as e:
             return Response([])
+
+
+class LeaderDemoteToUserView(APIView):
+    """团长自愿降级为普通用户；管理员不可降级为用户"""
+    permission_classes = [IsAuthenticated, IsLeaderRole]
+
+    def post(self, request):
+        try:
+            user = request.user
+            if user.role == 'admin':
+                return Response({'error': '管理员不能降级为普通用户'}, status=400)
+
+            # 仅允许已批准的团长发起申请；如果已有待审批的降级申请，阻止重复提交
+            if user.role != 'leader' or user.leader_status not in (None, 'approved', 'pending'):
+                return Response({'error': '状态不允许操作'}, status=400)
+
+            if user.leader_status == 'pending' and (getattr(user, 'application_reason', '') or '').startswith('demote:'):
+                return Response({'error': '已有待审批的退出申请'}, status=400)
+
+            reason = request.data.get('reason', '')
+            user.leader_status = 'pending'
+            user.application_reason = f"demote:{reason}" if reason is not None else 'demote:'
+            user.save()
+            return Response({'ok': True, 'message': '退出申请已提交，等待管理员审批'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

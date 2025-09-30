@@ -26,6 +26,7 @@
             <div class="progress"><div class="progress-bar" style="width:${progress}%">${progress}%</div></div>
             <div class="mt-2 d-flex gap-2">
               <button class="btn btn-outline-primary btn-sm" data-view-orders="${g.id}">查看订单</button>
+              ${g.status === 'pending' ? `<button class="btn btn-success btn-sm" data-start-gb="${g.id}">立即开始</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -109,16 +110,65 @@
   }
 
   async function createGroupBuy() {
+    const product = document.getElementById('gb-product').value;
+    const target = document.getElementById('gb-target').value;
+    const startTime = document.getElementById('gb-start').value;
+    const endTime = document.getElementById('gb-end').value;
+    
+    // 表单验证
+    if (!product) {
+      alert('请选择商品');
+      return;
+    }
+    if (!target || parseInt(target, 10) <= 0) {
+      alert('请输入有效的目标人数');
+      return;
+    }
+    if (!startTime) {
+      alert('请选择开始时间');
+      return;
+    }
+    if (!endTime) {
+      alert('请选择结束时间');
+      return;
+    }
+    
+    // 时间验证
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const now = new Date();
+    
+    if (start < now) {
+      alert('开始时间不能早于当前时间');
+      return;
+    }
+    if (end <= start) {
+      alert('结束时间必须晚于开始时间');
+      return;
+    }
+    
     const payload = {
-      product: parseInt(document.getElementById('gb-product').value, 10),
-      target_participants: parseInt(document.getElementById('gb-target').value, 10),
-      start_time: document.getElementById('gb-start').value,
-      end_time: document.getElementById('gb-end').value
+      product: parseInt(product, 10),
+      target_participants: parseInt(target, 10),
+      start_time: startTime,
+      end_time: endTime
     };
-    const res = await window.api.fetchAPI('/api/leader/groupbuys/', { method: 'POST', body: payload });
-    if (res.ok) {
-      newGbModal.hide();
-      loadGroupBuys();
+    
+    try {
+      const res = await window.api.fetchAPI('/api/leader/groupbuys/', { method: 'POST', body: payload });
+      
+      if (res.ok) {
+        alert('拼单创建成功！');
+        newGbModal.hide();
+        loadGroupBuys();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.detail || errorData.message || '创建失败，请重试';
+        alert(`错误：${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('创建拼单时出错:', error);
+      alert('网络错误，请检查连接后重试');
     }
   }
 
@@ -129,35 +179,168 @@
     });
     document.getElementById('save-gb')?.addEventListener('click', createGroupBuy);
 
-    // 页面导航现在由统一导航系统处理
+    // 页面内标签切换（支持左侧导航）
+    document.querySelectorAll('.sidebar-nav .nav-link, .page-tabs .nav-link')?.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = tab.getAttribute('data-page');
+        const pageId = 'page-' + page;
+        
+        // 隐藏所有页面
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        
+        // 显示目标页面
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+          targetPage.style.display = '';
+        }
+        
+        // 更新标签激活状态（支持左侧导航）
+        document.querySelectorAll('.sidebar-nav .nav-link, .page-tabs .nav-link').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // 加载对应数据
+        if (page === 'dashboard') loadLeaderDashboard();
+        else if (page === 'groupbuys') loadGroupBuys();
+        else if (page === 'pickups') loadPickupManagement();
+        else if (page === 'commissions') loadCommissions();
+      });
+    });
 
     document.addEventListener('click', async (e) => {
       const viewBtn = e.target.closest('button[data-view-orders]');
       if (viewBtn) {
         const id = parseInt(viewBtn.getAttribute('data-view-orders'), 10);
-        const res = await window.api.fetchAPI(`/api/leader/groupbuys/${id}/orders/`);
-        if (!res.ok) return;
-        const orders = await res.json();
+        
+        // 获取拼单详情和订单列表
+        const [gbRes, ordersRes] = await Promise.all([
+          window.api.fetchAPI(`/api/leader/groupbuys/`),
+          window.api.fetchAPI(`/api/leader/groupbuys/${id}/orders/`)
+        ]);
+        
+        if (!ordersRes.ok) return;
+        
+        const orders = await ordersRes.json();
+        
+        // 查找当前拼单信息
+        let groupbuy = null;
+        if (gbRes.ok) {
+          const allGroupbuys = await gbRes.json();
+          groupbuy = allGroupbuys.find(g => g.id === id);
+        }
+        
         const modalHtml = document.createElement('div');
         modalHtml.className = 'modal fade';
+        
+        // 状态翻译
+        const statusMap = {
+          'pending': '待开始',
+          'active': '进行中',
+          'successful': '已成团',
+          'failed': '已失败',
+          'canceled': '已取消'
+        };
+        
+        const orderStatusMap = {
+          'pending_payment': '待支付',
+          'awaiting_group_success': '待成团',
+          'successful': '已成团',
+          'ready_for_pickup': '待提货',
+          'completed': '已完成',
+          'canceled': '已取消'
+        };
+        
         modalHtml.innerHTML = `
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
-              <div class="modal-header"><h5 class="modal-title">订单列表</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+              <div class="modal-header">
+                <h5 class="modal-title">🛒 拼单详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
               <div class="modal-body">
-                <div class="vstack gap-2">
-                  ${orders.map(o => `
-                    <div class=\"d-flex justify-content-between align-items-center border rounded p-2\">
-                      <div>
-                        <div class=\"fw-semibold\">订单 #${o.id}</div>
-                        <div class=\"text-muted small\">状态：${o.status}，总价：${o.total_price}</div>
-                      </div>
-                      <div>
-                        ${o.status === 'successful' ? `<button class=\"btn btn-primary btn-sm\" data-pickup=\"${o.id}\">确认提货</button>` : ''}
+                ${groupbuy ? `
+                  <div class="card shadow-community mb-3">
+                    <div class="card-body">
+                      <h6 class="card-title mb-3">📦 拼单信息</h6>
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <div class="text-muted small">商品名称</div>
+                          <div class="fw-semibold">${groupbuy.product_name || groupbuy.product}</div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="text-muted small">状态</div>
+                          <div><span class="badge text-bg-${groupbuy.status === 'active' ? 'success' : groupbuy.status === 'successful' ? 'primary' : 'secondary'}">${statusMap[groupbuy.status] || groupbuy.status}</span></div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="text-muted small">目标人数</div>
+                          <div class="fw-semibold">${groupbuy.target_participants} 人</div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="text-muted small">当前人数</div>
+                          <div class="fw-semibold text-primary">${groupbuy.current_participants} 人</div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="text-muted small">完成度</div>
+                          <div class="fw-semibold">${Math.round((groupbuy.current_participants / Math.max(1, groupbuy.target_participants)) * 100)}%</div>
+                        </div>
+                        ${groupbuy.start_time ? `
+                          <div class="col-md-6">
+                            <div class="text-muted small">开始时间</div>
+                            <div class="small">${new Date(groupbuy.start_time).toLocaleString('zh-CN')}</div>
+                          </div>
+                        ` : ''}
+                        ${groupbuy.end_time ? `
+                          <div class="col-md-6">
+                            <div class="text-muted small">结束时间</div>
+                            <div class="small">${new Date(groupbuy.end_time).toLocaleString('zh-CN')}</div>
+                          </div>
+                        ` : ''}
                       </div>
                     </div>
-                  `).join('')}
-                </div>
+                  </div>
+                ` : ''}
+                
+                <h6 class="mb-3">📋 订单列表 (${orders.length} 单)</h6>
+                ${orders.length === 0 ? `
+                  <div class="text-center text-muted py-4">
+                    <div class="mb-2">📦</div>
+                    <div>暂无订单</div>
+                  </div>
+                ` : `
+                  <div class="vstack gap-2">
+                    ${orders.map(o => `
+                      <div class="card">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                              <div class="fw-semibold">订单 #${o.id}</div>
+                              <div class="text-muted small">${o.user_name || '用户'} · ${o.user_phone || ''}</div>
+                            </div>
+                            <span class="badge text-bg-${o.status === 'completed' ? 'success' : o.status === 'ready_for_pickup' ? 'primary' : 'info'}">
+                              ${orderStatusMap[o.status] || o.status}
+                            </span>
+                          </div>
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                              <span class="text-muted small">数量：</span>
+                              <span class="fw-semibold">${o.quantity || 1}</span>
+                              <span class="text-muted small ms-3">总价：</span>
+                              <span class="fw-semibold">¥${o.total_price}</span>
+                            </div>
+                            <div>
+                              ${o.status === 'successful' || o.status === 'ready_for_pickup' ? `
+                                <button class="btn btn-primary btn-sm" data-pickup="${o.id}">确认提货</button>
+                              ` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
               </div>
             </div>
           </div>`;
@@ -165,6 +348,21 @@
         const modal = new bootstrap.Modal(modalHtml);
         modal.show();
         modalHtml.addEventListener('hidden.bs.modal', () => modalHtml.remove());
+      }
+
+      const startBtn = e.target.closest('button[data-start-gb]');
+      if (startBtn) {
+        const id = parseInt(startBtn.getAttribute('data-start-gb'), 10);
+        if (confirm('确认立即开始该拼单？')) {
+          const res = await window.api.fetchAPI(`/api/leader/groupbuys/${id}/start/`, { method: 'POST' });
+          if (res.ok) {
+            alert('拼单已开始');
+            loadGroupBuys();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.error || '操作失败');
+          }
+        }
       }
 
       const pickupBtn = e.target.closest('button[data-pickup]');
@@ -216,7 +414,7 @@
     
     const res = await window.api.fetchAPI('/api/leader/pickups/');
     if (!res.ok) {
-      container.innerHTML = '<div class="alert alert-info">暂无提货数据</div>';
+      container.innerHTML = '<div class="border rounded-3 p-4 text-center"><div class="fs-3 mb-2">📦</div><div class="fw-semibold mb-1">暂无提货数据</div><div class="text-muted small">成团订单将显示在这里</div></div>';
       return;
     }
     
@@ -224,7 +422,7 @@
     container.innerHTML = '';
     
     if (pickups.length === 0) {
-      container.innerHTML = '<div class="community-highlight"><h6>📦 暂无待提货订单</h6><p class="text-muted mb-0">当拼单成功后，订单将出现在这里</p></div>';
+      container.innerHTML = '<div class="border rounded-3 p-4 text-center"><div class="fs-3 mb-2">📦</div><div class="fw-semibold mb-1">暂无待提货订单</div><div class="text-muted small">当拼单成功后，订单将出现在这里</div></div>';
       return;
     }
     
@@ -331,13 +529,13 @@
     }
     
     // 提成明细列表
-    if (detailsRes.ok) {
+      if (detailsRes.ok) {
       const details = await detailsRes.json();
       
       if (details.length === 0) {
         const emptyCard = document.createElement('div');
-        emptyCard.className = 'community-highlight';
-        emptyCard.innerHTML = '<h6>📊 暂无提成记录</h6><p class="text-muted mb-0">完成拼单后，提成记录将显示在这里</p>';
+        emptyCard.className = 'border rounded-3 p-4 text-center';
+        emptyCard.innerHTML = '<div class="fs-3 mb-2">📊</div><div class="fw-semibold mb-1">暂无提成记录</div><div class="text-muted small">完成拼单后，提成记录将显示在这里</div>';
         container.appendChild(emptyCard);
         return;
       }

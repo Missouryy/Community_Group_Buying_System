@@ -2,9 +2,11 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .admin_views import (
     AdminProductViewSet, LeaderApplicationsListView, LeaderApplicationDetailView,
-    AdminAlertListView, AdminAlertMarkReadView, AdminStatsView, AdminSalesDailyView
+    AdminAlertListView, AdminAlertMarkReadView, AdminStatsView, AdminSalesDailyView,
+    AdminOrderListView, AdminOrderDetailView, AdminOrderUpdateStatusView,
+    AdminOrderBatchUpdateView, AdminOrderCancelView
 )
-from .leader_views import LeaderGroupBuyListCreateView, LeaderGroupBuyOrdersView, LeaderConfirmPickupView
+from .leader_views import LeaderGroupBuyListCreateView, LeaderGroupBuyOrdersView, LeaderConfirmPickupView, LeaderStartGroupBuyView
 from .user_views import (
     JoinGroupBuyView, GroupBuyPublicListView, MyOrdersView,
     MeView, OrderConfirmView, OrderReviewView, ProductReviewsListView,
@@ -15,7 +17,7 @@ from .stats_views import (
     PublicStatsView, SuccessfulGroupBuysView, FeaturedLeadersView, RecommendationsView
 )
 from .enhanced_leader_views import (
-    LeaderStatsView, LeaderPickupsView, LeaderCommissionsSummaryView, LeaderCommissionsView
+    LeaderStatsView, LeaderPickupsView, LeaderCommissionsSummaryView, LeaderCommissionsView, LeaderDemoteToUserView
 )
 from .enhanced_admin_views import (
     AdminLeaderApproveView, AdminLeaderRejectView, AdminLeaderDetailsView, AdminLeaderDeactivateView
@@ -42,6 +44,7 @@ urlpatterns = [
     # 原有的API端点
     path('leader/groupbuys/', LeaderGroupBuyListCreateView.as_view(), name='leader-groupbuys'),
     path('leader/groupbuys/<int:id>/orders/', LeaderGroupBuyOrdersView.as_view(), name='leader-groupbuys-orders'),
+    path('leader/groupbuys/<int:id>/start/', LeaderStartGroupBuyView.as_view(), name='leader-groupbuys-start'),
     path('leader/orders/<int:id>/pickup/', LeaderConfirmPickupView.as_view(), name='leader-orders-pickup'),
     path('groupbuys/', GroupBuyPublicListView.as_view(), name='groupbuys-list'),
     path('products/', ProductPublicListView.as_view(), name='products-public-list'),
@@ -60,6 +63,13 @@ urlpatterns = [
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/sales/daily/', AdminSalesDailyView.as_view(), name='admin-sales-daily'),
     
+    # 管理员订单管理API
+    path('admin/orders/', AdminOrderListView.as_view(), name='admin-orders-list'),
+    path('admin/orders/<int:order_id>/', AdminOrderDetailView.as_view(), name='admin-order-detail'),
+    path('admin/orders/<int:order_id>/status/', AdminOrderUpdateStatusView.as_view(), name='admin-order-update-status'),
+    path('admin/orders/batch-update/', AdminOrderBatchUpdateView.as_view(), name='admin-orders-batch-update'),
+    path('admin/orders/<int:order_id>/cancel/', AdminOrderCancelView.as_view(), name='admin-order-cancel'),
+    
     # 新增的统计和推荐API
     path('stats/', PublicStatsView.as_view(), name='public-stats'),
     path('groupbuys/successful/', SuccessfulGroupBuysView.as_view(), name='successful-groupbuys'),
@@ -71,6 +81,7 @@ urlpatterns = [
     path('leader/pickups/', LeaderPickupsView.as_view(), name='leader-pickups'),
     path('leader/commissions/summary/', LeaderCommissionsSummaryView.as_view(), name='leader-commissions-summary'),
     path('leader/commissions/', LeaderCommissionsView.as_view(), name='leader-commissions'),
+    path('leader/demote/', LeaderDemoteToUserView.as_view(), name='leader-demote'),
     
     # 新增的管理员功能API
     path('admin/leaders/<int:user_id>/approve/', AdminLeaderApproveView.as_view(), name='admin-leader-approve'),

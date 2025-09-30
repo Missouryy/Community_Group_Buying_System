@@ -105,8 +105,8 @@ window.payment = (function() {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-center">
-                        <div class="community-highlight mb-3">
-                            <h6>请使用${method === 'wechat' ? '微信' : '支付宝'}扫码支付</h6>
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="fw-semibold">请使用${method === 'wechat' ? '微信' : '支付宝'}扫码支付</div>
                         </div>
                         
                         <div class="d-flex justify-content-center mb-3">
@@ -181,8 +181,8 @@ window.payment = (function() {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-center">
-                        <div class="community-highlight mb-3">
-                            <h6>请点击下方按钮前往支付宝完成支付</h6>
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="fw-semibold">请点击下方按钮前往支付宝完成支付</div>
                         </div>
                         
                         <div class="mb-3">
@@ -240,9 +240,9 @@ window.payment = (function() {
                             <h5 class="mt-2">支付成功！</h5>
                         </div>
                         
-                        <div class="community-highlight mb-3">
-                            <p class="mb-0">订单 #${orderId} 支付完成</p>
-                            <p class="text-muted small mb-0">等待拼单达成目标人数</p>
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="mb-1">订单 #${orderId} 支付完成</div>
+                            <div class="text-muted small">等待拼单达成目标人数</div>
                         </div>
                         
                         <div class="d-flex gap-2 justify-content-center">

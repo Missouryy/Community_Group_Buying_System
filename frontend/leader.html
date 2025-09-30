@@ -11,7 +11,42 @@
 <body>
     <!-- 导航将由 nav.js 动态生成 -->
 
-    <div class="container py-3">
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- 左侧导航 -->
+            <div class="col-12 col-md-3 col-lg-2 mb-4 mb-md-0">
+                <div class="sidebar-nav sticky-top" style="top: 80px;">
+                    <ul class="nav flex-column nav-pills">
+                        <li class="nav-item">
+                            <button class="nav-link active w-100 text-start" data-page="dashboard" type="button">
+                                <span class="me-2">📊</span>
+                                <span>仪表盘</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link w-100 text-start" data-page="groupbuys" type="button">
+                                <span class="me-2">🛒</span>
+                                <span>拼单管理</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link w-100 text-start" data-page="pickups" type="button">
+                                <span class="me-2">📦</span>
+                                <span>提货管理</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link w-100 text-start" data-page="commissions" type="button">
+                                <span class="me-2">💰</span>
+                                <span>提成明细</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 右侧内容区 -->
+            <div class="col-12 col-md-9 col-lg-10">
             <main>
                 <div id="page-dashboard" class="page">
                     <div class="row g-3" id="leader-stats"></div>
@@ -32,6 +67,8 @@
                     <div id="leader-commissions" class="vstack gap-2"></div>
                 </div>
             </main>
+            </div>
+        </div>
     </div>
 
     <!-- 新拼单 Modal -->

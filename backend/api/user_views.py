@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -54,14 +55,31 @@ class JoinGroupBuyView(APIView):
                     price_per_unit=price_per_unit
                 )
 
-                # 更新拼单参与人数
-                group_buy.current_participants = group_buy.current_participants + 1
-                group_buy.save()
+                # 更新拼单参与数量（按件数累计）
+                group_buy.current_participants = group_buy.current_participants + quantity
+                # 如果拼单原为 pending 且已到开始时间，自动激活
+                now = timezone.now()
+                if group_buy.status == 'pending' and group_buy.start_time <= now:
+                    group_buy.status = 'active'
 
-        except Exception:
-            return Response({"error": "参团失败，请稍后重试"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                # 如果达到目标人数，标记拼单和所有待成团订单为 successful
+                if group_buy.current_participants >= group_buy.target_participants:
+                    group_buy.status = 'successful'
+                    group_buy.save()
+                    Order.objects.filter(group_buy_id=group_buy.id, status='awaiting_group_success').update(status='successful')
+                else:
+                    group_buy.save()
 
-        return Response({"message": "参团成功"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({"error": f"参团失败：{str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "message": "参团成功",
+            "order_id": order.id,
+            "total_price": str(order.total_price)
+        }, status=status.HTTP_201_CREATED)
 
 
 class GroupBuyPublicListView(generics.ListAPIView):
@@ -69,7 +87,10 @@ class GroupBuyPublicListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return GroupBuy.objects.select_related('product').filter(status='active').order_by('-id')
+        # 显示 active 和 pending 状态的拼单（pending 表示即将开始）
+        return GroupBuy.objects.select_related('product').filter(
+            status__in=['active', 'pending']
+        ).order_by('-created_at')
 
 
 class MyOrdersView(generics.ListAPIView):
