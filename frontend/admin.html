@@ -9,29 +9,10 @@
     <link href="/styles.css" rel="stylesheet">
 </head>
 <body>
-    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">管理后台</a>
-        <div class="navbar-nav">
-            <div class="nav-item text-nowrap">
-                <a class="nav-link px-3" href="#" id="logout">退出登录</a>
-            </div>
-        </div>
-    </header>
+    <!-- 导航将由 nav.js 动态生成 -->
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3 sidebar-sticky">
-                    <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link active" href="#" data-page="dashboard">仪表盘主页</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" data-page="products">商品管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" data-page="leaders">团长审核</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" data-page="stats">销量统计</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" data-page="inventory">库存预警</a></li>
-                    </ul>
-                </div>
-            </nav>
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-3">
+    <div class="container py-3">
+            <main>
                 <div id="page-dashboard" class="page">
                     <div class="row g-3" id="stats-cards"></div>
                     <div class="card mt-3"><div class="card-body">
@@ -55,15 +36,11 @@
                     <h5>团长审核（占位）</h5>
                     <div id="leaders-table"></div>
                 </div>
-                <div id="page-stats" class="page" style="display:none">
-                    <h5>销量统计（占位）</h5>
-                </div>
                 <div id="page-inventory" class="page" style="display:none">
                     <h5>库存预警</h5>
                     <div id="alerts-list" class="vstack gap-2"></div>
                 </div>
             </main>
-        </div>
     </div>
 
     <!-- Modal -->
@@ -87,6 +64,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/nav.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>

@@ -9,45 +9,187 @@
     <link href="/styles.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/index.html">社区团购</a>
-            <div class="d-flex" id="nav-actions"></div>
-        </div>
-    </nav>
+    <!-- 导航将由 nav.js 动态生成 -->
 
     <main class="container py-4">
-        <h3 class="mb-3">正在进行的拼单</h3>
+        <!-- 社区团购横幅 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-deal lift">
+                    <div class="card-body text-center">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2 class="mb-2">🏘️ 社区团购，邻里共享</h2>
+                                <p class="text-muted mb-0">新鲜食材直供，团购价格更优惠，邻里一起省更多</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="row g-2 text-center">
+                                    <div class="col-4">
+                                        <div class="fw-bold text-success fs-5" id="total-active-groups">0</div>
+                                        <div class="text-muted small">活跃拼单</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-primary fs-5" id="total-participants">0</div>
+                                        <div class="text-muted small">参团人数</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-warning fs-5" id="total-savings">¥0</div>
+                                        <div class="text-muted small">已省金额</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷入口 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex gap-3 flex-wrap">
+                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('food')">
+                        🥬 生鲜蔬菜
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('fruit')">
+                        🍎 新鲜水果
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('meat')">
+                        🥩 肉禽蛋类
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('daily')">
+                        🧴 日用百货
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="filterGroupBuys('all')">
+                        📋 全部拼单
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 拼单列表 -->
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <div>
+                <h3 class="m-0">🛒 正在进行的拼单</h3>
+                <div class="text-muted small">新鲜直供，拼团优惠</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small">排序：</span>
+                <select class="form-select form-select-sm" style="width: auto;" onchange="sortGroupBuys(this.value)">
+                    <option value="time">最新发布</option>
+                    <option value="progress">参团人数</option>
+                    <option value="price">价格低到高</option>
+                    <option value="ending">即将结束</option>
+                </select>
+            </div>
+        </div>
         <div id="groupbuy-list" class="row g-3"></div>
+
+        <!-- 成功案例展示 -->
+        <section class="section">
+            <div class="card shadow-community">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">🎉 最近成功的拼单</h5>
+                    <div id="success-stories" class="row g-3">
+                        <!-- 成功案例将由JavaScript动态填充 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 个性化推荐 -->
+        <section class="section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="m-0">💡 为你推荐</h5>
+                    <div class="text-muted small">基于你的购买历史和兴趣</div>
+                </div>
+                <a href="#" class="btn btn-outline-secondary btn-sm" id="refresh-recos">
+                    🔄 换一批
+                </a>
+            </div>
+            <div id="reco-list" class="row g-3"></div>
+        </section>
+
+        <!-- 社区团长推荐 -->
+        <section class="section">
+            <div class="card shadow-deal">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">👑 优秀团长</h5>
+                            <div class="text-muted small">为社区服务的热心邻居</div>
+                        </div>
+                        <a href="/profile.html" class="btn btn-warning btn-sm">申请成为团长</a>
+                    </div>
+                    <div id="featured-leaders" class="row g-3">
+                        <!-- 团长推荐将由JavaScript动态填充 -->
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
+
+    <!-- Join Modal -->
+    <div class="modal fade" id="joinModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">参与拼单</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="ratio-16x9 me-3" style="width:120px"><img id="join-image" alt=""></div>
+                        <div>
+                            <div id="join-name" class="fw-semibold"></div>
+                            <div class="text-muted small">价格：<span id="join-price">-</span></div>
+                            <div class="text-muted small">已参：<span id="join-current">0</span> / 目标：<span id="join-target">0</span></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">选择数量</label>
+                        <input type="number" class="form-control" id="join-qty" value="1" min="1">
+                        <input type="hidden" id="join-id">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="join-submit">立即参团</button>
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                            <span class="visually-hidden">支付方式</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-payment="wechat">💬 微信支付</a></li>
+                            <li><a class="dropdown-item" href="#" data-payment="alipay">💰 支付宝支付</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/nav.js"></script>
+    <script src="/js/payment.js"></script>
+    <script src="/js/websocket.js"></script>
     <script src="/js/user.js"></script>
     <script>
-      (function(){
-        const actions = document.getElementById('nav-actions');
-        if (!actions) return;
-        const tokens = window.api.getTokens();
-        const toLogin = () => actions.innerHTML = '<a class="btn btn-outline-light me-2" href="/login.html">登录/注册</a>';
-        if (!tokens.access) { toLogin(); return; }
-        try {
-          const payload = JSON.parse(atob(tokens.access.split('.')[1]));
-          const role = payload.role;
-          if (role === 'admin') {
-            actions.innerHTML = '<a class="btn btn-outline-warning me-2" href="/admin.html">管理后台</a><button class="btn btn-outline-light" id="logout">退出登录</button>';
-          } else if (role === 'leader') {
-            actions.innerHTML = '<a class="btn btn-outline-warning me-2" href="/leader.html">团长门户</a><a class="btn btn-outline-light me-2" href="/orders.html">我的订单</a><button class="btn btn-outline-light" id="logout">退出登录</button>';
-          } else {
-            actions.innerHTML = '<a class="btn btn-outline-light me-2" href="/orders.html">我的订单</a><a class="btn btn-outline-light me-2" href="/profile.html">个人中心</a><button class="btn btn-outline-light" id="logout">退出登录</button>';
-          }
-          document.getElementById('logout')?.addEventListener('click', () => {
-            localStorage.clear(); sessionStorage.clear(); window.location.href = '/login.html';
-          });
-        } catch (e) {
-          toLogin();
+      // 首页特定逻辑
+      document.addEventListener('DOMContentLoaded', () => {
+        // 连接WebSocket状态到导航系统
+        if (window.websocket && window.navSystem) {
+          const originalShowStatus = window.websocket.showConnectionStatus || function() {};
+          window.websocket.showConnectionStatus = function(status) {
+            window.navSystem.setWebSocketStatus(status, status === 'connected' ? '实时连接' : '连接断开');
+          };
         }
-      })();
+        
+        // Refresh recos handler
+        document.getElementById('refresh-recos')?.addEventListener('click', (e) => {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('refresh-recommendations'));
+        });
+      });
     </script>
 </body>
 </html>

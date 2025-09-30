@@ -27,6 +27,11 @@ class User(AbstractUser):
     ))
     real_name = models.CharField(max_length=100, blank=True, null=True)
     id_card = models.CharField(max_length=18, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    wechat_openid = models.CharField(max_length=100, blank=True, null=True)
+    application_reason = models.TextField(blank=True, null=True)
+    rejection_reason = models.TextField(blank=True, null=True)
     total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     membership_tier = models.ForeignKey(MembershipTier, on_delete=models.SET_NULL, null=True, blank=True)
     loyalty_points = models.IntegerField(default=0)
@@ -49,7 +54,9 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.05)
     image = models.ImageField(upload_to='products/', null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return self.name
@@ -89,8 +96,22 @@ class Order(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     group_buy = models.ForeignKey(GroupBuy, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=24, choices=STATUS_CHOICES)
+    payment_status = models.CharField(max_length=20, choices=(
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ), default='pending')
+    payment_method = models.CharField(max_length=20, choices=(
+        ('wechat', 'WeChat Pay'),
+        ('alipay', 'Alipay'),
+        ('cash', 'Cash'),
+    ), blank=True, null=True)
+    payment_time = models.DateTimeField(blank=True, null=True)
+    pickup_address = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

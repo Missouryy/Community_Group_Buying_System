@@ -8,38 +8,273 @@
     <link href="/apple-theme.css" rel="stylesheet">
     <link href="/styles.css?v=2" rel="stylesheet">
 </head>
-<body class="d-flex align-items-center py-4 bg-body-tertiary">
+<body class="login-bg d-flex align-items-center py-4">
+    <div class="emoji-field" aria-hidden="true"></div>
     <main class="form-signin w-100 m-auto">
-        <form id="login-form" class="card p-4 shadow-sm">
-            <h1 class="h4 mb-3 fw-normal text-center">请登录</h1>
-            <div class="form-floating mb-2">
-                <input type="text" class="form-control" id="username" placeholder="用户名" required>
-                <label for="username">用户名</label>
+        <div class="glass shadow-sm p-4">
+            <div class="d-flex justify-content-center mb-3">
+                <div class="segmented-control">
+                    <button type="button" class="segment active" data-tab="login">登录</button>
+                    <button type="button" class="segment" data-tab="register">注册</button>
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="password" placeholder="密码" required>
-                <label for="password">密码</label>
-            </div>
-            <button class="btn btn-primary w-100 py-2" type="submit">登录</button>
-            <div id="error" class="text-danger small mt-2" style="display:none"></div>
-        </form>
+
+            <!-- 登录表单 -->
+            <form id="login-form">
+                <div class="form-floating mb-2">
+                    <input type="text" class="form-control" id="username" placeholder="用户名" required>
+                    <label for="username">用户名</label>
+                </div>
+                <div class="form-floating mb-2">
+                    <input type="password" class="form-control" id="password" placeholder="密码" required>
+                    <label for="password">密码</label>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" checked>
+                        <label class="form-check-label" for="rememberMe">记住我</label>
+                    </div>
+                    <a class="small text-muted" href="#" onclick="return false;">忘记密码？</a>
+                </div>
+                <button class="btn btn-primary w-100 py-2" type="submit">登录</button>
+                <div id="login-error" class="text-danger small mt-2" style="display:none"></div>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="register-form" style="display:none">
+                <div class="form-floating mb-2">
+                    <input type="text" class="form-control" id="reg-username" placeholder="用户名" required>
+                    <label for="reg-username">用户名</label>
+                </div>
+                <div class="form-floating mb-2">
+                    <input type="email" class="form-control" id="reg-email" placeholder="邮箱（可选）">
+                    <label for="reg-email">邮箱（可选）</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="reg-password" placeholder="密码" required>
+                    <label for="reg-password">密码</label>
+                </div>
+                <button class="btn btn-primary w-100 py-2" type="submit" id="btn-register">注册并登录</button>
+                <div id="register-error" class="text-danger small mt-2" style="display:none"></div>
+            </form>
+        </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js?v=2"></script>
     <script src="/js/auth.js?v=2"></script>
     <script>
+        // Segmented control toggle
+        document.querySelectorAll('.segment').forEach(seg => {
+            seg.addEventListener('click', () => {
+                document.querySelectorAll('.segment').forEach(s => s.classList.remove('active'));
+                seg.classList.add('active');
+                const tab = seg.getAttribute('data-tab');
+                document.getElementById('login-form').style.display = (tab === 'login') ? '' : 'none';
+                document.getElementById('register-form').style.display = (tab === 'register') ? '' : 'none';
+            });
+        });
+
+        // Login submit
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
+            const persist = document.getElementById('rememberMe').checked;
+            const errorEl = document.getElementById('login-error');
+            errorEl.style.display = 'none';
             try {
-                await window.auth.login(username, password);
+                await window.auth.login(username, password, persist);
             } catch (err) {
-                const el = document.getElementById('error');
-                el.textContent = err.message || '登录失败';
-                el.style.display = 'block';
+                errorEl.textContent = err.message || '登录失败';
+                errorEl.style.display = 'block';
             }
         });
+
+        // Register submit with graceful fallback if endpoint missing
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const errorEl = document.getElementById('register-error');
+            errorEl.style.display = 'none';
+            const btn = document.getElementById('btn-register');
+            btn.disabled = true; btn.textContent = '正在注册...';
+            try {
+                const payload = email ? { username, email, password } : { username, password };
+                const endpoints = ['/api/register/', '/api/users/register/', '/api/users/'];
+                let success = false;
+                for (const ep of endpoints) {
+                    const res = await window.api.fetchAPI(ep, { method: 'POST', body: payload });
+                    if (res.ok) { success = true; break; }
+                }
+                if (!success) {
+                    throw new Error('注册暂不可用，请联系管理员开通');
+                }
+                // Auto login after successful registration
+                await window.auth.login(username, password, true);
+            } catch (err) {
+                errorEl.textContent = err.message || '注册失败';
+                errorEl.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = '注册并登录';
+            }
+        });
+
+        // Emoji 点状分布生成
+        (function () {
+            const field = document.querySelector('.emoji-field');
+            if (!field) return;
+            const EMOJI_STRING = '🛒🧺📦💰🎉🛍️🥬🥦🥕🍅🍊🍇🍉🍈🍍🍎🍓🥑🥭🍒🥝🍐🍌🌽🍞🥯🧀🥛🍲🍱🍚🍗🍤🍙🧃';
+            const EMOJIS = Array.from(EMOJI_STRING);
+
+            const HEX_HORIZONTAL_GAP = 116; // px，控制蜂窝单元宽度
+            const HEX_VERTICAL_GAP = Math.round(HEX_HORIZONTAL_GAP * Math.sqrt(3) / 2); // 六边形垂直间距
+            const H_MARGIN_FACTOR = 0.6;
+            const V_MARGIN_FACTOR = 0.65;
+            const BASE_FONT_SIZE = 36;
+            const SCALE_MIN = 0.8;
+            const SCALE_MAX = 1.2;
+
+            function clearField() {
+                field.innerHTML = '';
+            }
+
+            function populate() {
+                clearField();
+                const rect = field.getBoundingClientRect();
+                const width = rect.width || window.innerWidth;
+                const height = rect.height || window.innerHeight;
+                const marginX = HEX_HORIZONTAL_GAP * H_MARGIN_FACTOR;
+                const marginY = HEX_VERTICAL_GAP * V_MARGIN_FACTOR;
+                const cols = Math.ceil((width + marginX * 2) / HEX_HORIZONTAL_GAP) + 1;
+                const rows = Math.ceil((height + marginY * 2) / HEX_VERTICAL_GAP) + 1;
+
+                let index = 0;
+                for (let row = -1; row <= rows; row++) {
+                    const offsetX = (row % 2 !== 0) ? HEX_HORIZONTAL_GAP / 2 : 0;
+                    const baseY = row * HEX_VERTICAL_GAP;
+                    if (baseY < -marginY || baseY > height + marginY) continue;
+
+                    for (let col = -1; col <= cols; col++) {
+                        const baseX = col * HEX_HORIZONTAL_GAP + offsetX;
+                        if (baseX < -marginX || baseX > width + marginX) continue;
+
+                        const emoji = EMOJIS[index % EMOJIS.length];
+                        const span = document.createElement('span');
+                        span.className = 'emoji';
+                        span.textContent = emoji;
+
+                        // 轻微抖动，保持自然生动
+                        const jitterX = ((index % 5) - 2) * 3.4;
+                        const jitterY = (((index + 3) % 5) - 2) * 3;
+                        const sizeScale = SCALE_MIN + (Math.random() * (SCALE_MAX - SCALE_MIN));
+                        const size = BASE_FONT_SIZE * sizeScale;
+
+                        span.style.left = baseX + jitterX - size / 2 + 'px';
+                        span.style.top = baseY + jitterY - size / 2 + 'px';
+                        span.style.fontSize = size + 'px';
+                        span.style.animationDuration = 42 + (index % 7) * 6 + 's';
+                        span.style.animationDelay = ((index % 9) - 4) * 3 + 's';
+                        span.style.setProperty('--emoji-scale', sizeScale.toFixed(3));
+                        span.dataset.scale = sizeScale.toFixed(3);
+
+                        field.appendChild(span);
+                        index++;
+                    }
+                }
+            }
+
+            // 初始化 & 自适应
+            populate();
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(populate, 120);
+            });
+
+            // 拖拽回弹互动
+            const activePointers = new Map();
+
+            function initiateDrag(event, target) {
+                const pointerId = event.pointerId || 'mouse';
+                const rect = target.getBoundingClientRect();
+                const startX = event.clientX;
+                const startY = event.clientY;
+                const originLeft = parseFloat(target.style.left || 0);
+                const originTop = parseFloat(target.style.top || 0);
+
+                activePointers.set(pointerId, {
+                    target,
+                    startX,
+                    startY,
+                    originLeft,
+                    originTop,
+                    startTime: performance.now()
+                });
+
+                target.style.transition = 'none';
+                target.setPointerCapture && target.setPointerCapture(pointerId);
+            }
+
+            function updateDrag(event) {
+                const pointerId = event.pointerId || 'mouse';
+                const drag = activePointers.get(pointerId);
+                if (!drag) return;
+
+                event.preventDefault();
+
+                const dx = event.clientX - drag.startX;
+                const dy = event.clientY - drag.startY;
+
+                drag.target.style.left = drag.originLeft + dx + 'px';
+                drag.target.style.top = drag.originTop + dy + 'px';
+
+                const scale = parseFloat(drag.target.dataset.scale || 1);
+                const pressFactor = Math.max(1.05, scale + 0.25);
+                drag.target.style.transform = `scale(${pressFactor})`;
+            }
+
+            function endDrag(event) {
+                const pointerId = event.pointerId || 'mouse';
+                const drag = activePointers.get(pointerId);
+                if (!drag) return;
+
+                const { target, originLeft, originTop, startTime } = drag;
+                const elapsed = Math.max(1, performance.now() - startTime);
+
+                const currentLeft = parseFloat(target.style.left || 0);
+                const currentTop = parseFloat(target.style.top || 0);
+                const dx = currentLeft - originLeft;
+                const dy = currentTop - originTop;
+
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const baseDuration = Math.min(1200, Math.max(400, distance * 8));
+                const damping = 0.28 + Math.min(0.4, distance / 320);
+
+                target.style.transition = `transform ${baseDuration}ms cubic-bezier(0.18, ${1 + damping}, 0.21, 1), left ${baseDuration}ms cubic-bezier(0.18, ${1 + damping}, 0.21, 1), top ${baseDuration}ms cubic-bezier(0.18, ${1 + damping}, 0.21, 1)`;
+
+                const scale = parseFloat(target.dataset.scale || 1);
+                target.style.transform = `scale(${scale})`;
+                requestAnimationFrame(() => {
+                    target.style.left = originLeft + 'px';
+                    target.style.top = originTop + 'px';
+                });
+
+                activePointers.delete(pointerId);
+                target.releasePointerCapture && target.releasePointerCapture(pointerId);
+            }
+
+            field.addEventListener('pointerdown', (event) => {
+                const target = event.target.closest('.emoji');
+                if (!target) return;
+                initiateDrag(event, target);
+            });
+
+            field.addEventListener('pointermove', updateDrag);
+            field.addEventListener('pointerup', endDrag);
+            field.addEventListener('pointercancel', endDrag);
+        })();
     </script>
 </body>
 </html>

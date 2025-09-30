@@ -10,12 +10,36 @@ from .user_views import (
     MeView, OrderConfirmView, OrderReviewView, ProductReviewsListView,
     MembershipTierListView, ProductPublicListView
 )
+# 新增的增强视图
+from .stats_views import (
+    PublicStatsView, SuccessfulGroupBuysView, FeaturedLeadersView, RecommendationsView
+)
+from .enhanced_leader_views import (
+    LeaderStatsView, LeaderPickupsView, LeaderCommissionsSummaryView, LeaderCommissionsView
+)
+from .enhanced_admin_views import (
+    AdminLeaderApproveView, AdminLeaderRejectView, AdminLeaderDetailsView, AdminLeaderDeactivateView
+)
+from .enhanced_user_views import (
+    UserApplyLeaderView, ProductNotifyView, EnhancedMeView
+)
+from .image_upload_views import (
+    ImageUploadView, ProductImageUploadView
+)
+from .payment_views import (
+    WeChatPayView, WeChatPayNotifyView, AlipayView, PaymentStatusView
+)
+from .analytics_views import (
+    UserBehaviorTrackingView, AdminAnalyticsView, DailyStatsView
+)
 
 router = DefaultRouter()
 router.register(r'admin/products', AdminProductViewSet, basename='admin-products')
 
 urlpatterns = [
     path('', include(router.urls)),
+    
+    # 原有的API端点
     path('leader/groupbuys/', LeaderGroupBuyListCreateView.as_view(), name='leader-groupbuys'),
     path('leader/groupbuys/<int:id>/orders/', LeaderGroupBuyOrdersView.as_view(), name='leader-groupbuys-orders'),
     path('leader/orders/<int:id>/pickup/', LeaderConfirmPickupView.as_view(), name='leader-orders-pickup'),
@@ -24,7 +48,7 @@ urlpatterns = [
     path('group-buys/<int:id>/join/', JoinGroupBuyView.as_view(), name='group-buys-join'),
     path('orders/join/', JoinGroupBuyView.as_view(), name='orders-join'),
     path('me/orders/', MyOrdersView.as_view(), name='me-orders'),
-    path('users/me/', MeView.as_view(), name='users-me'),
+    path('users/me/', EnhancedMeView.as_view(), name='users-me'),  # 使用增强版本
     path('memberships/tiers/', MembershipTierListView.as_view(), name='memberships-tiers'),
     path('orders/<int:id>/confirm/', OrderConfirmView.as_view(), name='orders-confirm'),
     path('orders/<int:id>/review/', OrderReviewView.as_view(), name='orders-review'),
@@ -35,6 +59,43 @@ urlpatterns = [
     path('admin/alerts/<int:alert_id>/read/', AdminAlertMarkReadView.as_view(), name='admin-alerts-read'),
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/sales/daily/', AdminSalesDailyView.as_view(), name='admin-sales-daily'),
+    
+    # 新增的统计和推荐API
+    path('stats/', PublicStatsView.as_view(), name='public-stats'),
+    path('groupbuys/successful/', SuccessfulGroupBuysView.as_view(), name='successful-groupbuys'),
+    path('leaders/featured/', FeaturedLeadersView.as_view(), name='featured-leaders'),
+    path('recommendations/', RecommendationsView.as_view(), name='recommendations'),
+    
+    # 新增的团长功能API
+    path('leader/stats/', LeaderStatsView.as_view(), name='leader-stats'),
+    path('leader/pickups/', LeaderPickupsView.as_view(), name='leader-pickups'),
+    path('leader/commissions/summary/', LeaderCommissionsSummaryView.as_view(), name='leader-commissions-summary'),
+    path('leader/commissions/', LeaderCommissionsView.as_view(), name='leader-commissions'),
+    
+    # 新增的管理员功能API
+    path('admin/leaders/<int:user_id>/approve/', AdminLeaderApproveView.as_view(), name='admin-leader-approve'),
+    path('admin/leaders/<int:user_id>/reject/', AdminLeaderRejectView.as_view(), name='admin-leader-reject'),
+    path('admin/leaders/<int:user_id>/details/', AdminLeaderDetailsView.as_view(), name='admin-leader-details'),
+    path('admin/leaders/<int:user_id>/deactivate/', AdminLeaderDeactivateView.as_view(), name='admin-leader-deactivate'),
+    
+    # 新增的用户功能API
+    path('users/apply-leader/', UserApplyLeaderView.as_view(), name='user-apply-leader'),
+    path('products/<int:product_id>/notify/', ProductNotifyView.as_view(), name='product-notify'),
+    
+    # 图片上传API
+    path('upload/image/', ImageUploadView.as_view(), name='image-upload'),
+    path('products/<int:product_id>/upload-image/', ProductImageUploadView.as_view(), name='product-image-upload'),
+    
+    # 支付API
+    path('payment/wechat/', WeChatPayView.as_view(), name='wechat-pay'),
+    path('payment/wechat/notify/', WeChatPayNotifyView.as_view(), name='wechat-pay-notify'),
+    path('payment/alipay/', AlipayView.as_view(), name='alipay'),
+    path('payment/status/<int:order_id>/', PaymentStatusView.as_view(), name='payment-status'),
+    
+    # 数据分析API
+    path('analytics/behavior/', UserBehaviorTrackingView.as_view(), name='user-behavior-tracking'),
+    path('admin/analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
+    path('admin/analytics/daily/', DailyStatsView.as_view(), name='daily-stats'),
 ]
 
 

@@ -1,3 +1,111 @@
+
+/* Layout utilities */
 .form-signin { max-width: 380px; }
 .page { min-height: 60vh; }
+
+/* Apple-style glassmorphism helpers */
+.glass {
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+}
+
+.glass-dark {
+  background: rgba(32, 32, 34, 0.6);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+/* Top navbar refinements */
+.navbar.sticky-top {
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* Login background with emoji pattern */
+
+.login-bg {
+  min-height: 100vh;
+  background: #82e0b1;
+  position: relative;
+  overflow: hidden;
+  color: #061c13;
+}
+
+.login-bg::before,
+.login-bg::after {
+  content: none;
+}
+
+@keyframes floatEmojis {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  25% { transform: translate3d(5%, -4%, 0) scale(1.05); }
+  50% { transform: translate3d(-4%, 6%, 0) scale(0.95); }
+  75% { transform: translate3d(3%, -3%, 0) scale(1.02); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes floatMist {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.68; }
+  40% { transform: translate3d(2%, -1.8%, 0) scale(1.06); opacity: 0.74; }
+  70% { transform: translate3d(-1.5%, 2.4%, 0) scale(0.96); opacity: 0.66; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.68; }
+}
+
+/* 上层 emoji 点状分布容器 */
+.emoji-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  mix-blend-mode: normal;
+}
+
+.emoji-field .emoji {
+  position: absolute;
+  opacity: 0.78;
+  line-height: 1;
+  user-select: none;
+  animation-name: floatEmojis;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform;
+  text-shadow: 0 16px 36px rgba(0, 40, 24, 0.18);
+  pointer-events: auto;
+  touch-action: none;
+  transition: filter 160ms ease;
+}
+
+/* Tabs accent for login/register */
+.segmented-control {
+  display: inline-flex;
+  background: rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 4px;
+}
+.segmented-control .segment {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+.segmented-control .segment.active {
+  background: #007AFF;
+  color: #fff;
+}
+
+/* Cards image ratio */
+.ratio-16x9 { position: relative; width: 100%; padding-top: 56.25%; }
+.ratio-16x9 > img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+
+/* Hover lift for cards and buttons */
+.lift:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.lift { transition: transform .2s ease, box-shadow .2s ease; }
+
 
