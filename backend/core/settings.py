@@ -17,11 +17,10 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-# 尝试加载 backend/.env 与项目根 .env（谁存在加载谁）
-env_paths = [BASE_DIR / '.env', BASE_DIR.parent / '.env']
-for p in env_paths:
-    if p.exists():
-        load_dotenv(p)
+# 仅加载 backend/.env（推荐做法，单一来源）
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
 
 
 # Quick-start development settings - unsuitable for production

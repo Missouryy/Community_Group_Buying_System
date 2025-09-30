@@ -56,7 +56,10 @@ window.api = (function () {
       } catch (e) {
         localStorage.clear();
         sessionStorage.clear();
-        window.location.href = '/login.html';
+        // 跳转到主页面而不是登录页，让用户可以浏览内容
+        if (window.location.pathname !== '/index.html' && window.location.pathname !== '/') {
+          window.location.href = '/index.html';
+        }
         throw e;
       }
     }

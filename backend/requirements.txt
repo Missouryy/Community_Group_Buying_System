@@ -9,3 +9,4 @@ PyMySQL==1.1.2
 python-dotenv==1.1.1
 cffi==1.17.1
 Pillow==10.4.0
+channels==4.3.1

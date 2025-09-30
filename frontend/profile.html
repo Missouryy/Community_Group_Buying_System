@@ -9,57 +9,411 @@
     <link href="/styles.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/index.html">社区团购</a>
-        </div>
-    </nav>
+    <!-- 导航将由 nav.js 动态生成 -->
 
-    <main class="container py-4">
-        <div class="row g-3">
-            <div class="col-12 col-lg-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">会员中心</h5>
-                        <div id="member-tier" class="mb-2 fw-semibold"></div>
-                        <div class="text-muted small mb-2">当前积分：<span id="member-points">0</span></div>
-                        <div class="mb-2">
-                            <div class="progress"><div id="member-progress" class="progress-bar" style="width:0%">0%</div></div>
-                            <div class="text-muted small mt-1">距离下一等级还需 <span id="points-to-next">0</span> 分</div>
+    <div class="container py-3">
+            <main>
+                <div id="page-profile" class="page">
+                    <div class="row g-4">
+                        <!-- 会员中心卡片 -->
+                        <div class="col-12 col-lg-6">
+                            <div class="card shadow-community lift">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="fs-1 me-3">👤</div>
+                                        <div>
+                                            <h5 class="card-title mb-1">会员中心</h5>
+                                            <div class="text-muted small">享受专属优惠和权益</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="community-highlight mb-3">
+                                        <div id="member-tier" class="fw-bold fs-5 mb-1">普通会员</div>
+                                        <div class="text-muted small">当前积分：<span id="member-points" class="fw-semibold text-success">0</span> 分</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="small text-muted">升级进度</span>
+                                            <span class="small text-muted">距离下一等级还需 <span id="points-to-next" class="fw-semibold">0</span> 分</span>
+                                        </div>
+                                        <div class="progress"><div id="member-progress" class="progress-bar" style="width:0%">0%</div></div>
+                                    </div>
+                                    
+                                    <div class="row g-3 text-center">
+                                        <div class="col-4">
+                                            <div class="fs-6 fw-bold" id="total-orders">0</div>
+                                            <div class="text-muted small">总订单</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="fs-6 fw-bold" id="total-savings">¥0</div>
+                                            <div class="text-muted small">累计节省</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="fs-6 fw-bold" id="join-days">0</div>
+                                            <div class="text-muted small">加入天数</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 个人资料卡片 -->
+                        <div class="col-12 col-lg-6">
+                            <div class="card shadow-community lift">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="fs-1 me-3">✏️</div>
+                                        <div>
+                                            <h5 class="card-title mb-1">个人资料</h5>
+                                            <div class="text-muted small">完善资料，享受更好服务</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <form id="profile-form" class="vstack gap-3">
+                                        <div>
+                                            <label class="form-label fw-semibold">姓名</label>
+                                            <input type="text" id="pf-realname" class="form-control" placeholder="请输入真实姓名">
+                                        </div>
+                                        <div>
+                                            <label class="form-label fw-semibold">邮箱</label>
+                                            <input type="email" id="pf-email" class="form-control" placeholder="请输入邮箱地址">
+                                        </div>
+                                        <div>
+                                            <label class="form-label fw-semibold">手机号</label>
+                                            <input type="tel" id="pf-phone" class="form-control" placeholder="请输入手机号码">
+                                        </div>
+                                        <div>
+                                            <label class="form-label fw-semibold">收货地址</label>
+                                            <textarea id="pf-address" class="form-control" rows="2" placeholder="请输入详细收货地址"></textarea>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-primary flex-fill" id="pf-save" type="button">
+                                                💾 保存资料
+                                            </button>
+                                            <button class="btn btn-outline-secondary" id="pf-reset" type="button">
+                                                🔄 重置
+                                            </button>
+                                        </div>
+                                        <div id="pf-msg" class="small" style="display:none"></div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 申请成为团长卡片 -->
+                        <div class="col-12" id="leader-application-section">
+                            <div class="card shadow-deal lift">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="fs-1 me-3">👑</div>
+                                            <div>
+                                                <h5 class="card-title mb-1">成为团长</h5>
+                                                <div class="text-muted small">发起拼单，赚取佣金，服务社区</div>
+                                            </div>
+                                        </div>
+                                        <div id="leader-status-badge"></div>
+                                    </div>
+                                    
+                                    <div id="leader-application-content">
+                                        <!-- 动态内容将由JavaScript填充 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 订单历史摘要 -->
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <h6 class="mb-0">📦 最近订单</h6>
+                                        <a href="/orders.html" class="btn btn-outline-primary btn-sm">查看全部</a>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="recent-orders">
+                                        <!-- 最近订单列表 -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </main>
+            </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/nav.js"></script>
     <script>
+      let originalProfileData = {};
+      
       async function loadProfile() {
         const tokens = window.api.getTokens();
         if (!tokens.access) { window.location.href = '/login.html'; return; }
-        const [meRes, tiersRes] = await Promise.all([
+        
+        // 加载用户基本信息和会员信息
+        const [meRes, tiersRes, ordersRes] = await Promise.all([
           window.api.fetchAPI('/api/users/me/'),
-          window.api.fetchAPI('/api/memberships/tiers/')
+          window.api.fetchAPI('/api/memberships/tiers/').catch(() => null),
+          window.api.fetchAPI('/api/me/orders/?limit=3').catch(() => null)
         ]);
-        if (!meRes.ok || !tiersRes.ok) return;
+        
+        if (!meRes.ok) return;
         const me = await meRes.json();
-        const tiers = await tiersRes.json();
+        originalProfileData = { ...me };
+        
+        // 更新会员信息
         const tierName = me.membership_tier?.tier_name || '普通会员';
         const points = me.loyalty_points || 0;
-        const currentRequired = me.membership_tier?.points_required || 0;
-        const nextTier = tiers.find(t => t.points_required > currentRequired);
-        const target = nextTier ? nextTier.points_required : currentRequired || 1;
-        const ratio = Math.min(100, Math.round((points / target) * 100));
-
+        
         document.getElementById('member-tier').textContent = tierName;
         document.getElementById('member-points').textContent = points;
-        document.getElementById('member-progress').style.width = ratio + '%';
-        document.getElementById('member-progress').textContent = ratio + '%';
-        document.getElementById('points-to-next').textContent = Math.max(0, target - points);
+        
+        // 计算升级进度
+        if (tiersRes && tiersRes.ok) {
+          const tiers = await tiersRes.json();
+          const currentRequired = me.membership_tier?.points_required || 0;
+          const nextTier = tiers.find(t => t.points_required > currentRequired);
+          const target = nextTier ? nextTier.points_required : currentRequired || 100;
+          const ratio = Math.min(100, Math.round((points / target) * 100));
+          
+          document.getElementById('member-progress').style.width = ratio + '%';
+          document.getElementById('member-progress').textContent = ratio + '%';
+          document.getElementById('points-to-next').textContent = Math.max(0, target - points);
+        }
+        
+        // 更新统计信息
+        document.getElementById('total-orders').textContent = me.total_orders || 0;
+        document.getElementById('total-savings').textContent = `¥${me.total_savings || 0}`;
+        const joinDays = me.date_joined ? Math.floor((new Date() - new Date(me.date_joined)) / (1000 * 60 * 60 * 24)) : 0;
+        document.getElementById('join-days').textContent = joinDays;
+
+        // 填充个人资料表单
+        document.getElementById('pf-realname').value = me.real_name || '';
+        document.getElementById('pf-email').value = me.email || '';
+        document.getElementById('pf-phone').value = me.phone || '';
+        document.getElementById('pf-address').value = me.address || '';
+        
+        // 加载团长申请状态
+        loadLeaderApplicationStatus(me);
+        
+        // 加载最近订单
+        if (ordersRes && ordersRes.ok) {
+          const orders = await ordersRes.json();
+          loadRecentOrders(orders);
+        }
       }
-      document.addEventListener('DOMContentLoaded', loadProfile);
+      
+      async function loadLeaderApplicationStatus(user) {
+        const badge = document.getElementById('leader-status-badge');
+        const content = document.getElementById('leader-application-content');
+        
+        if (user.role === 'leader') {
+          badge.innerHTML = '<span class="badge text-bg-success">已是团长</span>';
+          content.innerHTML = `
+            <div class="community-highlight">
+              <h6>🎉 恭喜！您已经是团长了</h6>
+              <p class="text-muted mb-2">您可以发起拼单，管理订单，赚取佣金</p>
+              <a href="/leader.html" class="btn btn-primary">进入团长门户</a>
+            </div>`;
+        } else if (user.leader_status === 'pending') {
+          badge.innerHTML = '<span class="badge text-bg-warning">审核中</span>';
+          content.innerHTML = `
+            <div class="alert alert-warning">
+              <h6>⏰ 申请审核中</h6>
+              <p class="mb-0">您的团长申请正在审核中，请耐心等待管理员处理</p>
+            </div>`;
+        } else if (user.leader_status === 'rejected') {
+          badge.innerHTML = '<span class="badge text-bg-danger">已拒绝</span>';
+          content.innerHTML = `
+            <div class="alert alert-danger">
+              <h6>❌ 申请被拒绝</h6>
+              <p class="mb-2">${user.rejection_reason || '很遗憾，您的团长申请未通过审核'}</p>
+              <button class="btn btn-warning btn-sm" onclick="reapplyLeader()">重新申请</button>
+            </div>`;
+        } else {
+          badge.innerHTML = '<span class="badge text-bg-secondary">可申请</span>';
+          content.innerHTML = `
+            <div class="row g-3">
+              <div class="col-md-8">
+                <h6>团长权益</h6>
+                <ul class="list-unstyled">
+                  <li>✅ 发起社区拼单活动</li>
+                  <li>✅ 赚取订单佣金（通常5-10%）</li>
+                  <li>✅ 管理提货和配送</li>
+                  <li>✅ 获得专属团长标识</li>
+                </ul>
+              </div>
+              <div class="col-md-4 d-flex align-items-center">
+                <button class="btn btn-warning w-100" onclick="showLeaderApplicationForm()">
+                  <i class="bi bi-crown me-1"></i>申请成为团长
+                </button>
+              </div>
+            </div>`;
+        }
+      }
+      
+      function loadRecentOrders(orders) {
+        const container = document.getElementById('recent-orders');
+        if (!orders || orders.length === 0) {
+          container.innerHTML = '<div class="text-muted text-center py-3">暂无订单记录</div>';
+          return;
+        }
+        
+        container.innerHTML = orders.map(order => {
+          const statusClass = order.status === 'completed' ? 'success' : order.status === 'successful' ? 'primary' : 'warning';
+          const statusText = order.status === 'completed' ? '已完成' : order.status === 'successful' ? '成功' : '进行中';
+          
+          return `
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+              <div>
+                <div class="fw-semibold">订单 #${order.id}</div>
+                <div class="text-muted small">${new Date(order.created_at).toLocaleDateString()}</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-semibold">¥${order.total_price}</div>
+                <span class="badge text-bg-${statusClass}">${statusText}</span>
+              </div>
+            </div>`;
+        }).join('');
+      }
+      
+      // 团长申请相关函数
+      function showLeaderApplicationForm() {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">👑 申请成为团长</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <form id="leader-application-form">
+                  <div class="mb-3">
+                    <label class="form-label">联系电话 <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" id="app-phone" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">所在地区 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="app-address" placeholder="如：北京市朝阳区某某小区" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">申请理由</label>
+                    <textarea class="form-control" id="app-reason" rows="3" placeholder="请简单说明您申请成为团长的原因和优势"></textarea>
+                  </div>
+                  <div class="alert alert-info">
+                    <small>📝 提交申请后，管理员将在1-3个工作日内完成审核</small>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitLeaderApplication()">提交申请</button>
+              </div>
+            </div>
+          </div>`;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        modal.addEventListener('hidden.bs.modal', () => modal.remove());
+      }
+      
+      async function submitLeaderApplication() {
+        const phone = document.getElementById('app-phone').value;
+        const address = document.getElementById('app-address').value;
+        const reason = document.getElementById('app-reason').value;
+        
+        if (!phone || !address) {
+          alert('请填写必要信息');
+          return;
+        }
+        
+        try {
+          const res = await window.api.fetchAPI('/api/users/apply-leader/', {
+            method: 'POST',
+            body: { phone, address, reason }
+          });
+          
+          if (res.ok) {
+            alert('申请提交成功！请等待管理员审核');
+            bootstrap.Modal.getInstance(document.querySelector('.modal.show')).hide();
+            loadProfile(); // 重新加载页面
+          } else {
+            alert('申请提交失败，请重试');
+          }
+        } catch (error) {
+          alert('网络错误，请重试');
+        }
+      }
+      
+      function reapplyLeader() {
+        showLeaderApplicationForm();
+      }
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        loadProfile();
+        
+        // 保存个人资料
+        document.getElementById('pf-save')?.addEventListener('click', async () => {
+          const msg = document.getElementById('pf-msg');
+          const saveBtn = document.getElementById('pf-save');
+          
+          msg.style.display = 'none';
+          saveBtn.disabled = true;
+          saveBtn.textContent = '保存中...';
+          
+          try {
+            const body = {
+              real_name: document.getElementById('pf-realname').value,
+              email: document.getElementById('pf-email').value,
+              phone: document.getElementById('pf-phone').value,
+              address: document.getElementById('pf-address').value
+            };
+            
+            const endpoints = ['/api/users/me/', '/api/users/profile/'];
+            let ok = false;
+            
+            for (const ep of endpoints) {
+              const res = await window.api.fetchAPI(ep, { method: 'PATCH', body });
+              if (res.ok) { 
+                ok = true; 
+                originalProfileData = { ...originalProfileData, ...body };
+                break; 
+              }
+            }
+            
+            msg.className = ok ? 'small text-success' : 'small text-warning';
+            msg.textContent = ok ? '✅ 保存成功' : '⚠️ 当前环境未开放资料修改接口';
+            msg.style.display = 'block';
+            
+          } catch (e) {
+            msg.className = 'small text-danger';
+            msg.textContent = '❌ 保存失败';
+            msg.style.display = 'block';
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '💾 保存资料';
+          }
+        });
+        
+        // 重置个人资料
+        document.getElementById('pf-reset')?.addEventListener('click', () => {
+          document.getElementById('pf-realname').value = originalProfileData.real_name || '';
+          document.getElementById('pf-email').value = originalProfileData.email || '';
+          document.getElementById('pf-phone').value = originalProfileData.phone || '';
+          document.getElementById('pf-address').value = originalProfileData.address || '';
+          
+          const msg = document.getElementById('pf-msg');
+          msg.style.display = 'none';
+        });
+      });
     </script>
 </body>
 </html>
