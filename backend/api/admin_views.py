@@ -1,14 +1,16 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Product, User, Alert, Order, GroupBuy
-from .serializers import ProductSerializer, AlertSerializer
+from rest_framework.decorators import action
+from .models import Product, User, Alert, Order, GroupBuy, OrderItem
+from .serializers import ProductSerializer, AlertSerializer, OrderSerializer, OrderDetailSerializer
 from .permissions import IsAdminRole
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.db.models import Sum, Count, F
+from django.db.models import Sum, Count, F, Q
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import TruncDate
+from django.db import transaction
 
 
 class AdminProductViewSet(viewsets.ModelViewSet):
@@ -22,15 +24,37 @@ class LeaderApplicationsListView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def get(self, request):
-        qs = User.objects.filter(leader_status='pending').order_by('-date_joined')
+        # 获取所有团长相关用户：待审核、已批准、已拒绝
+        status_filter = request.GET.get('status', 'all')
+        
+        if status_filter == 'pending':
+            qs = User.objects.filter(leader_status='pending')
+        elif status_filter == 'approved':
+            qs = User.objects.filter(role='leader', leader_status='approved')
+        elif status_filter == 'rejected':
+            qs = User.objects.filter(leader_status='rejected')
+        else:
+            # 返回所有与团长相关的用户
+            qs = User.objects.filter(
+                Q(leader_status__isnull=False) | Q(role='leader')
+            )
+        
+        qs = qs.order_by('-date_joined')
+        
         data = [
             {
                 'id': u.id,
                 'username': u.username,
                 'email': u.email,
                 'real_name': u.real_name,
+                'phone': u.phone,
+                'address': u.address,
+                'role': u.role,
                 'leader_status': u.leader_status,
-                'date_joined': u.date_joined,
+                'application_reason': u.application_reason,
+                'rejection_reason': u.rejection_reason,
+                'date_joined': u.date_joined.isoformat() if u.date_joined else None,
+                'created_at': u.date_joined.isoformat() if u.date_joined else None,
             }
             for u in qs
         ]
@@ -131,4 +155,217 @@ class AdminSalesDailyView(APIView):
             for r in qs
         ]
         return Response({'days': days, 'items': data})
+
+
+class AdminOrderListView(APIView):
+    """管理员订单列表"""
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        # 获取查询参数
+        status_filter = request.GET.get('status')
+        search = request.GET.get('search')
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 20))
+        
+        # 构建查询
+        queryset = Order.objects.select_related(
+            'user', 'group_buy', 'group_buy__product', 'group_buy__leader'
+        ).prefetch_related('items').order_by('-created_at')
+        
+        # 状态筛选
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # 搜索
+        if search:
+            queryset = queryset.filter(
+                Q(user__username__icontains=search) |
+                Q(user__real_name__icontains=search) |
+                Q(group_buy__product__name__icontains=search) |
+                Q(id__icontains=search)
+            )
+        
+        # 分页
+        total = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        orders = queryset[start:end]
+        
+        # 序列化数据
+        data = []
+        try:
+            for order in orders:
+                # 安全获取 quantity（Order 模型可能有也可能没有这个字段）
+                quantity = getattr(order, 'quantity', None)
+                if quantity is None:
+                    # 如果 Order 没有 quantity，从 OrderItem 中计算
+                    quantity = sum(item.quantity for item in order.items.all())
+                
+                data.append({
+                    'id': order.id,
+                    'user_id': order.user.id,
+                    'user_name': order.user.real_name or order.user.username,
+                    'user_phone': order.user.phone or '',
+                    'product_name': order.group_buy.product.name if order.group_buy and order.group_buy.product else '未知商品',
+                    'leader_name': order.group_buy.leader.real_name or order.group_buy.leader.username if order.group_buy and order.group_buy.leader else '未知团长',
+                    'quantity': quantity or 1,
+                    'total_price': str(order.total_price),
+                    'status': order.status,
+                    'payment_status': order.payment_status,
+                    'payment_method': order.payment_method or '',
+                    'created_at': order.created_at.isoformat(),
+                    'updated_at': order.updated_at.isoformat(),
+                })
+        except Exception as e:
+            # 如果出错，返回错误信息
+            return Response({
+                'error': f'序列化订单数据失败: {str(e)}',
+                'total': 0,
+                'page': page,
+                'page_size': page_size,
+                'results': []
+            }, status=500)
+        
+        return Response({
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'results': data
+        })
+
+
+class AdminOrderDetailView(APIView):
+    """管理员订单详情"""
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.select_related(
+                'user', 'group_buy', 'group_buy__product', 'group_buy__leader'
+            ).prefetch_related('items', 'items__product').get(id=order_id)
+            
+            # 订单项
+            items_data = []
+            for item in order.items.all():
+                items_data.append({
+                    'id': item.id,
+                    'product_id': item.product.id,
+                    'product_name': item.product.name,
+                    'quantity': item.quantity,
+                    'price_per_unit': str(item.price_per_unit),
+                    'subtotal': str(item.price_per_unit * item.quantity)
+                })
+            
+            data = {
+                'id': order.id,
+                'user': {
+                    'id': order.user.id,
+                    'username': order.user.username,
+                    'real_name': order.user.real_name,
+                    'phone': order.user.phone,
+                    'email': order.user.email,
+                },
+                'group_buy': {
+                    'id': order.group_buy.id,
+                    'product_name': order.group_buy.product.name if order.group_buy.product else '未知商品',
+                    'leader_name': order.group_buy.leader.real_name or order.group_buy.leader.username,
+                    'status': order.group_buy.status,
+                },
+                'quantity': order.quantity,
+                'total_price': str(order.total_price),
+                'status': order.status,
+                'payment_status': order.payment_status,
+                'payment_method': order.payment_method,
+                'payment_time': order.payment_time.isoformat() if order.payment_time else None,
+                'pickup_address': order.pickup_address,
+                'items': items_data,
+                'created_at': order.created_at.isoformat(),
+                'updated_at': order.updated_at.isoformat(),
+            }
+            
+            return Response(data)
+        except Order.DoesNotExist:
+            return Response({'error': '订单不存在'}, status=404)
+
+
+class AdminOrderUpdateStatusView(APIView):
+    """管理员更新订单状态"""
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+            new_status = request.data.get('status')
+            
+            # 验证状态
+            valid_statuses = dict(Order.STATUS_CHOICES).keys()
+            if new_status not in valid_statuses:
+                return Response({'error': '无效的订单状态'}, status=400)
+            
+            order.status = new_status
+            order.save()
+            
+            return Response({
+                'success': True,
+                'message': '订单状态已更新',
+                'order_id': order.id,
+                'new_status': new_status
+            })
+        except Order.DoesNotExist:
+            return Response({'error': '订单不存在'}, status=404)
+
+
+class AdminOrderBatchUpdateView(APIView):
+    """管理员批量更新订单"""
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def post(self, request):
+        order_ids = request.data.get('order_ids', [])
+        new_status = request.data.get('status')
+        
+        if not order_ids:
+            return Response({'error': '请选择订单'}, status=400)
+        
+        # 验证状态
+        valid_statuses = dict(Order.STATUS_CHOICES).keys()
+        if new_status not in valid_statuses:
+            return Response({'error': '无效的订单状态'}, status=400)
+        
+        updated_count = Order.objects.filter(id__in=order_ids).update(status=new_status)
+        
+        return Response({
+            'success': True,
+            'message': f'已更新 {updated_count} 个订单',
+            'updated_count': updated_count
+        })
+
+
+class AdminOrderCancelView(APIView):
+    """管理员取消订单"""
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def post(self, request, order_id):
+        try:
+            with transaction.atomic():
+                order = Order.objects.select_related('group_buy').get(id=order_id)
+                
+                if order.status in ['completed', 'canceled']:
+                    return Response({'error': '该订单无法取消'}, status=400)
+                
+                # 取消订单
+                order.status = 'canceled'
+                order.save()
+                
+                # 更新拼单参与人数
+                if order.group_buy.current_participants > 0:
+                    order.group_buy.current_participants -= 1
+                    order.group_buy.save()
+                
+                return Response({
+                    'success': True,
+                    'message': '订单已取消'
+                })
+        except Order.DoesNotExist:
+            return Response({'error': '订单不存在'}, status=404)
 

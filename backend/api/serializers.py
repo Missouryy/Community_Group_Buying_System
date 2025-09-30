@@ -27,19 +27,22 @@ class GroupBuySerializer(serializers.ModelSerializer):
     class Meta:
         model = GroupBuy
         fields = '__all__'
+        read_only_fields = ['leader', 'status', 'current_participants', 'created_at']
 
 
 class GroupBuyPublicSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
     product_price = serializers.SerializerMethodField()
     product_image_url = serializers.SerializerMethodField()
+    product_stock = serializers.SerializerMethodField()
 
     class Meta:
         model = GroupBuy
         fields = (
             'id', 'target_participants', 'current_participants',
             'start_time', 'end_time', 'status',
-            'product', 'product_name', 'product_price', 'product_image_url'
+            'product', 'product_name', 'product_price', 'product_image_url',
+            'product_stock'
         )
 
     def get_product_name(self, obj):
@@ -58,6 +61,9 @@ class GroupBuyPublicSerializer(serializers.ModelSerializer):
             return url
         return None
 
+    def get_product_stock(self, obj):
+        return getattr(obj.product, 'stock_quantity', None)
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -67,6 +73,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    """订单详情序列化器，包含更多关联信息"""
+    items = OrderItemSerializer(many=True, read_only=True)
+    user_name = serializers.CharField(source='user.real_name', read_only=True)
+    user_phone = serializers.CharField(source='user.phone', read_only=True)
+    product_name = serializers.CharField(source='group_buy.product.name', read_only=True)
+    leader_name = serializers.CharField(source='group_buy.leader.real_name', read_only=True)
 
     class Meta:
         model = Order

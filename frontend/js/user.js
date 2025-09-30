@@ -6,7 +6,7 @@
     if (!el) return;
     const res = await window.api.fetchAPI('/api/groupbuys/');
     if (!res.ok) {
-      el.innerHTML = '<div class="col-12"><div class="community-highlight"><h6>🛒 暂无活跃拼单</h6><p class="text-muted mb-0">精彩拼单即将上线，敬请期待</p></div></div>';
+      el.innerHTML = '<div class="col-12"><div class="border rounded-3 p-4 text-center"><div class="fs-3 mb-2">🛒</div><div class="fw-semibold mb-1">暂无活跃拼单</div><div class="text-muted small">精彩拼单即将上线，敬请期待</div></div></div>';
       return;
     }
     
@@ -15,7 +15,7 @@
     groupBuysById.clear();
     
     if (data.length === 0) {
-      el.innerHTML = '<div class="col-12"><div class="community-highlight"><h6>🛒 暂无活跃拼单</h6><p class="text-muted mb-0">精彩拼单即将上线，敬请期待</p></div></div>';
+      el.innerHTML = '<div class="col-12"><div class="border rounded-3 p-4 text-center"><div class="fs-3 mb-2">🛒</div><div class="fw-semibold mb-1">暂无活跃拼单</div><div class="text-muted small">精彩拼单即将上线，敬请期待</div></div></div>';
       return;
     }
     
@@ -87,29 +87,48 @@
 
   async function submitJoin(group_buy_id, quantity, paymentMethod = 'wechat') {
     try {
+      console.log('参团请求:', { group_buy_id, quantity });
+      
       const res = await window.api.fetchAPI(`/api/group-buys/${group_buy_id}/join/`, { 
         method: 'POST', 
-        body: { quantity } 
+        body: { quantity: parseInt(quantity) } 
       });
       
       if (res.ok) {
-        const orderData = await res.json();
-        const orderId = orderData.order_id || orderData.id;
+        const data = await res.json();
+        console.log('参团响应:', data);
         
         // 关闭参团模态框
         const mdl = document.getElementById('joinModal');
-        if (mdl) bootstrap.Modal.getInstance(mdl)?.hide();
+        if (mdl) {
+          const modalInstance = bootstrap.Modal.getInstance(mdl);
+          if (modalInstance) modalInstance.hide();
+        }
         
-        // 显示支付选择
-        showPaymentModal(orderId, orderData.total_price, paymentMethod);
+        // 显示成功消息
+        if (window.websocket && window.websocket.showNotificationToast) {
+          window.websocket.showNotificationToast('✅ 参团成功', data.message || '订单已创建，请及时支付', 'success');
+        } else {
+          alert(data.message || '参团成功！');
+        }
         
         // 刷新拼单列表
         loadActiveGroupBuys();
+        
+        // 如果有订单ID，可以跳转到订单页面
+        if (data.order_id) {
+          if (confirm('参团成功！是否前往订单页面？')) {
+            window.location.href = '/orders.html';
+          }
+        }
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || '参团失败');
+        const errorMsg = data.error || '参团失败，请重试';
+        alert(errorMsg);
+        console.error('参团失败:', res.status, data);
       }
     } catch (error) {
+      console.error('参团错误:', error);
       alert('参团失败: ' + error.message);
     }
   }
@@ -210,6 +229,29 @@
       document.getElementById('join-target').textContent = gb.target_participants ?? 0;
       const img = document.getElementById('join-image');
       if (img) { img.src = gb.product_image_url || ''; }
+      // 设定数量输入的最大值为库存
+      const qtyInput = document.getElementById('join-qty');
+      const stock = parseInt(gb.product_stock ?? '0', 10);
+      qtyInput.value = '1';
+      if (!isNaN(stock) && stock > 0) {
+        qtyInput.max = String(stock);
+      } else {
+        qtyInput.removeAttribute('max');
+      }
+      // 实时显示小计
+      qtyInput.oninput = () => {
+        const qty = Math.max(1, Math.min(parseInt(qtyInput.value || '1', 10), stock || Infinity));
+        qtyInput.value = String(qty);
+        const price = parseFloat(gb.product_price || 0) || 0;
+        const subtotal = (price * qty).toFixed(2);
+        qtyInput.closest('.modal-body').querySelector('#join-subtotal')?.remove();
+        const sub = document.createElement('div');
+        sub.id = 'join-subtotal';
+        sub.className = 'text-muted small mt-2';
+        sub.textContent = `小计：¥${subtotal}`;
+        qtyInput.parentElement.appendChild(sub);
+      };
+      qtyInput.oninput();
       const modal = new bootstrap.Modal(modalEl);
       modal.show();
     } else {
@@ -229,6 +271,17 @@
     if (!res.ok) return;
     const data = await res.json();
     el.innerHTML = '';
+    
+    // 状态翻译映射
+    const statusMap = {
+      'pending_payment': '待支付',
+      'awaiting_group_success': '待成团',
+      'successful': '已成团',
+      'ready_for_pickup': '待提货',
+      'completed': '已完成',
+      'canceled': '已取消'
+    };
+    
     data.forEach(o => {
       const badgeClass = o.status === 'awaiting_group_success' ? 'text-bg-warning' : (o.status === 'successful' || o.status === 'completed') ? 'text-bg-success' : 'text-bg-secondary';
       const card = document.createElement('div');
@@ -238,7 +291,7 @@
           <div class="flex-grow-1">
             <div class="d-flex align-items-center mb-1">
               <div class="fw-semibold me-2">订单 #${o.id}</div>
-              <span class="badge ${badgeClass}">${o.status}</span>
+              <span class="badge ${badgeClass}">${statusMap[o.status] || o.status}</span>
             </div>
             <div class="text-muted small">总价：${o.total_price}</div>
           </div>
@@ -403,7 +456,13 @@
     const joinSubmit = e.target.closest('#join-submit');
     if (joinSubmit) {
       const id = parseInt(document.getElementById('join-id').value, 10);
-      const qty = Math.max(1, parseInt(document.getElementById('join-qty').value || '1', 10));
+      const qtyInput = document.getElementById('join-qty');
+      const max = parseInt(qtyInput.max || '0', 10) || Infinity;
+      const qty = Math.max(1, Math.min(parseInt(qtyInput.value || '1', 10), max));
+      if (!isFinite(qty) || qty <= 0) {
+        alert('请输入有效数量');
+        return;
+      }
       submitJoin(id, qty);
     }
     
@@ -575,7 +634,7 @@
     groupBuysById.clear();
     
     if (filtered.length === 0) {
-      el.innerHTML = '<div class="col-12"><div class="community-highlight"><h6>🔍 没有找到相关拼单</h6><p class="text-muted mb-0">试试其他分类或稍后再来看看</p></div></div>';
+      el.innerHTML = '<div class="col-12"><div class="border rounded-3 p-4 text-center"><div class="fs-3 mb-2">🔍</div><div class="fw-semibold mb-1">没有找到相关拼单</div><div class="text-muted small">试试其他分类或稍后再来看看</div></div></div>';
       return;
     }
     

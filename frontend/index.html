@@ -120,7 +120,7 @@
                             <h5 class="card-title mb-1">👑 优秀团长</h5>
                             <div class="text-muted small">为社区服务的热心邻居</div>
                         </div>
-                        <a href="/profile.html" class="btn btn-warning btn-sm">申请成为团长</a>
+                        <a href="/profile.html" id="leader-cta-btn" class="btn btn-warning btn-sm">申请成为团长</a>
                     </div>
                     <div id="featured-leaders" class="row g-3">
                         <!-- 团长推荐将由JavaScript动态填充 -->
@@ -189,6 +189,27 @@
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('refresh-recommendations'));
         });
+
+        // 根据角色更新“申请成为团长/进入门户”按钮
+        try {
+          const cta = document.getElementById('leader-cta-btn');
+          if (cta && window.navSystem && typeof window.navSystem.getUserRole === 'function') {
+            const role = window.navSystem.getUserRole();
+            if (role === 'leader') {
+              cta.href = '/leader.html';
+              cta.textContent = '进入团长门户';
+              cta.className = 'btn btn-primary btn-sm';
+            } else if (role === 'admin') {
+              cta.href = '/admin.html';
+              cta.textContent = '进入管理后台';
+              cta.className = 'btn btn-primary btn-sm';
+            } else {
+              cta.href = '/profile.html';
+              cta.textContent = '申请成为团长';
+              cta.className = 'btn btn-warning btn-sm';
+            }
+          }
+        } catch (e) {}
       });
     </script>
 </body>

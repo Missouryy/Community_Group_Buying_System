@@ -15,8 +15,15 @@ class AdminLeaderApproveView(APIView):
     def post(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
-            user.role = 'leader'
-            user.leader_status = 'approved'
+            # 如果是降级申请（application_reason 以 demote: 开头），则批准降级为普通用户
+            if (user.application_reason or '').startswith('demote:'):
+                user.role = 'user'
+                user.leader_status = None
+                user.application_reason = ''
+            else:
+                # 正常团长申请批准
+                user.role = 'leader'
+                user.leader_status = 'approved'
             user.save()
             
             return Response({'success': True, 'message': '团长申请已批准'})
@@ -35,8 +42,14 @@ class AdminLeaderRejectView(APIView):
             user = User.objects.get(id=user_id)
             reason = request.data.get('reason', '')
             
-            user.leader_status = 'rejected'
-            user.rejection_reason = reason
+            # 如果是降级申请，拒绝则保持原团长身份，并记录拒绝原因
+            if (user.application_reason or '').startswith('demote:'):
+                user.leader_status = 'approved'
+                user.rejection_reason = reason
+            else:
+                # 正常入驻申请拒绝
+                user.leader_status = 'rejected'
+                user.rejection_reason = reason
             user.save()
             
             return Response({'success': True, 'message': '团长申请已拒绝'})
