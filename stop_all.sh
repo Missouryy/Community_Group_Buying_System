@@ -19,9 +19,9 @@ pkill -9 -f "manage.py runserver" 2>/dev/null && echo "   ✅ 按进程名终止
 
 echo ""
 
-# 2. 停止前端服务器 (端口 5500, 8080)
+# 2. 停止前端服务器 (端口 8080)
 echo "🌐 停止前端服务器..."
-for PORT in 5500 8080 5501; do
+for PORT in 8080; do
     PIDS=$(lsof -ti tcp:$PORT 2>/dev/null)
     if [ -n "$PIDS" ]; then
         echo "   端口 $PORT: $PIDS"
@@ -35,7 +35,7 @@ pkill -9 -f "http.server" 2>/dev/null && echo "   ✅ 按进程名终止成功" 
 
 echo ""
 
-# 3. 停止Celery (如果有)
+# 3. 停止Celery
 echo "⚙️  停止Celery进程..."
 pkill -9 -f "celery.*worker" 2>/dev/null && echo "   ✅ Worker已终止" || echo "   ℹ️  未发现Celery worker"
 pkill -9 -f "celery.*beat" 2>/dev/null && echo "   ✅ Beat已终止" || echo "   ℹ️  未发现Celery beat"
