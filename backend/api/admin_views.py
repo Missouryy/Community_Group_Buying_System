@@ -24,6 +24,8 @@ class LeaderApplicationsListView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def get(self, request):
+        from decimal import Decimal
+        
         # 获取所有团长相关用户：待审核、已批准、已拒绝
         status_filter = request.GET.get('status', 'all')
         
@@ -41,8 +43,13 @@ class LeaderApplicationsListView(APIView):
         
         qs = qs.order_by('-date_joined')
         
-        data = [
-            {
+        # 计算统计信息
+        data = []
+        commission_rate = Decimal('0.1')
+        current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        for u in qs:
+            user_data = {
                 'id': u.id,
                 'username': u.username,
                 'email': u.email,
@@ -51,13 +58,34 @@ class LeaderApplicationsListView(APIView):
                 'address': u.address,
                 'role': u.role,
                 'leader_status': u.leader_status,
+                'is_active': u.is_active,
                 'application_reason': u.application_reason,
                 'rejection_reason': u.rejection_reason,
                 'date_joined': u.date_joined.isoformat() if u.date_joined else None,
                 'created_at': u.date_joined.isoformat() if u.date_joined else None,
             }
-            for u in qs
-        ]
+            
+            # 如果是已批准的团长，添加统计信息
+            if u.role == 'leader':
+                # 拼单数
+                groupbuy_count = GroupBuy.objects.filter(leader=u).count()
+                
+                # 本月收益
+                monthly_orders = Order.objects.filter(
+                    group_buy__leader=u,
+                    status__in=['successful', 'completed'],
+                    created_at__gte=current_month
+                )
+                monthly_commission = sum((order.total_price * commission_rate) for order in monthly_orders) if monthly_orders.exists() else Decimal('0')
+                
+                user_data['groupbuy_count'] = groupbuy_count
+                user_data['monthly_commission'] = f"{monthly_commission:.2f}"
+            else:
+                user_data['groupbuy_count'] = 0
+                user_data['monthly_commission'] = '0.00'
+            
+            data.append(user_data)
+        
         return Response(data)
 
 

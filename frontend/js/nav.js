@@ -16,10 +16,12 @@ window.navSystem = (function() {
       ],
       leader: [
         { label: '团长门户', href: '/leader.html', icon: '👑', active: ['/leader.html'] },
+        { label: '我的订单', href: '/orders.html', icon: '📋', active: ['/orders.html'] },
         { label: '个人中心', href: '/profile.html', icon: '👤', active: ['/profile.html'] }
       ],
       admin: [
         { label: '管理后台', href: '/admin.html', icon: '⚙️', active: ['/admin.html'] },
+        { label: '我的订单', href: '/orders.html', icon: '📋', active: ['/orders.html'] },
         { label: '个人中心', href: '/profile.html', icon: '👤', active: ['/profile.html'] }
       ]
     }
@@ -128,6 +130,9 @@ window.navSystem = (function() {
 
     return `
       ${roleSpecificButtons[role] || ''}
+      <button class="btn btn-outline-secondary" id="theme-toggle" title="切换深浅模式">
+        <span class="me-1" id="theme-toggle-icon">🖥️</span><span id="theme-toggle-text">跟随系统</span>
+      </button>
       <button class="btn btn-outline-light" id="nav-logout">
         <span class="me-1">🚪</span>退出登录
       </button>
@@ -173,6 +178,14 @@ window.navSystem = (function() {
         }
       }
     });
+
+    // 主题切换
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#theme-toggle')) {
+        e.preventDefault();
+        toggleTheme();
+      }
+    });
   }
 
   /**
@@ -194,6 +207,8 @@ window.navSystem = (function() {
     
     // 绑定事件
     bindEvents();
+    // 应用主题
+    applyTheme(getSavedTheme());
   }
 
   /**
@@ -204,7 +219,56 @@ window.navSystem = (function() {
     if (currentNav) {
       currentNav.outerHTML = generateNavHTML();
       bindEvents();
+      applyTheme(getSavedTheme());
     }
+  }
+
+  // ====== 主题切换逻辑（仅深色/浅色） ======
+  function getSavedTheme() {
+    const t = localStorage.getItem('theme');
+    if (t === 'dark' || t === 'light') return t;
+    // 首次无记录时可参考系统偏好
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  function saveTheme(theme) {
+    localStorage.setItem('theme', theme);
+  }
+
+  function updateThemeToggleUI(theme) {
+    const iconEl = document.getElementById('theme-toggle-icon');
+    const textEl = document.getElementById('theme-toggle-text');
+    if (!iconEl || !textEl) return;
+    if (theme === 'dark') {
+      iconEl.textContent = '🌙';
+      textEl.textContent = '深色';
+    } else if (theme === 'light') {
+      iconEl.textContent = '🌞';
+      textEl.textContent = '浅色';
+    } else {
+      iconEl.textContent = '🌞';
+      textEl.textContent = '浅色';
+    }
+  }
+
+  function applyTheme(theme) {
+    const html = document.documentElement;
+    // 使用 Bootstrap 5.3 的 data-bs-theme 支持
+    if (theme === 'dark') {
+      html.setAttribute('data-bs-theme', 'dark');
+      html.style.colorScheme = 'dark';
+    } else {
+      html.setAttribute('data-bs-theme', 'light');
+      html.style.colorScheme = 'light';
+    }
+    updateThemeToggleUI(theme);
+  }
+
+  function toggleTheme() {
+    const current = getSavedTheme();
+    const next = current === 'dark' ? 'light' : 'dark';
+    saveTheme(next);
+    applyTheme(next);
   }
 
 

@@ -4,7 +4,7 @@ from rest_framework import status, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import GroupBuy, Product, Order, OrderItem, Review, MembershipTier
-from .serializers import GroupBuyPublicSerializer, OrderSerializer, ReviewSerializer, MembershipTierSerializer, ProductSerializer
+from .serializers import GroupBuyPublicSerializer, OrderSerializer, ReviewSerializer, MembershipTierSerializer, ProductSerializer, OrderDetailSerializer
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -24,8 +24,23 @@ class JoinGroupBuyView(APIView):
 
         try:
             with transaction.atomic():
+                # 使用 select_for_update 锁定拼单记录，防止并发问题
+                group_buy = GroupBuy.objects.select_for_update().get(id=group_buy_id)
                 product = Product.objects.select_for_update().get(id=group_buy.product_id)
 
+                # 检查拼单状态
+                if group_buy.status not in ['pending', 'active']:
+                    return Response({"error": "该拼单已结束或取消"}, status=status.HTTP_400_BAD_REQUEST)
+
+                # 检查是否会超过目标人数
+                remaining_slots = group_buy.target_participants - group_buy.current_participants
+                if quantity > remaining_slots:
+                    return Response({
+                        "error": f"参团失败：拼单仅剩 {remaining_slots} 个名额，无法加入 {quantity} 个",
+                        "remaining_slots": remaining_slots
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # 检查库存
                 if product.stock_quantity < quantity:
                     return Response({"error": "库存不足"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -101,9 +116,52 @@ class MyOrdersView(generics.ListAPIView):
         return (
             Order.objects
             .filter(user=self.request.user)
+            .select_related('group_buy', 'group_buy__product', 'group_buy__leader')
+            .prefetch_related('items', 'items__product')
             .order_by('-id')
-            .prefetch_related('items', 'items__product', 'group_buy')
         )
+
+
+class MyOrderDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, id: int):
+        try:
+            order = (
+                Order.objects
+                .select_related('user', 'group_buy', 'group_buy__product', 'group_buy__leader')
+                .prefetch_related('items', 'items__product')
+                .get(id=id, user=request.user)
+            )
+        except Order.DoesNotExist:
+            return Response({'error': '订单不存在'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = OrderDetailSerializer(order, context={'request': request})
+        data = serializer.data
+        
+        # 额外补充便于前端显示的字段
+        data['user'] = {
+            'username': request.user.username,
+            'real_name': getattr(request.user, 'real_name', '') or request.user.username,
+            'email': request.user.email,
+            'phone': getattr(request.user, 'phone', ''),
+        }
+        
+        if order.group_buy:
+            # 构建完整的 group_buy 信息字典
+            group_buy_data = {
+                'id': order.group_buy.id,
+                'product_name': getattr(order.group_buy.product, 'name', '') if order.group_buy.product else '',
+                'leader_name': getattr(order.group_buy.leader, 'real_name', '') or getattr(order.group_buy.leader, 'username', '') if order.group_buy.leader else '',
+                'current_participants': order.group_buy.current_participants,
+                'target_participants': order.group_buy.target_participants,
+                'status': order.group_buy.status,
+                'start_time': order.group_buy.start_time,
+                'end_time': order.group_buy.end_time,
+            }
+            data['group_buy'] = group_buy_data
+        
+        return Response(data)
 
 
 class MeView(APIView):

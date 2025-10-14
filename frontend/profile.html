@@ -4,20 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>个人资料 - 社区团购</title>
+    <!-- 性能优化：预连接CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- 关键CSS：防止emoji闪烁 -->
+    <style>
+        body,*{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",sans-serif!important}
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/apple-theme.css" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
-    <style>
-        /* 优化emoji显示，避免模糊 */
-        #member-tier-emoji,
-        #admin-info-area > div > div > div:first-child,
-        #leader-info-area > div > div > div:first-child {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-            font-feature-settings: "liga";
-        }
-    </style>
 </head>
 <body>
     <!-- 导航将由 nav.js 动态生成 -->
@@ -26,9 +21,10 @@
             <main>
                 <div id="page-profile" class="page">
                     <div class="row g-4">
-                        <!-- 会员中心卡片 -->
-                        <div class="col-12 col-lg-6">
-                            <div class="card shadow-community lift">
+                        <!-- 左侧栏 -->
+                        <div class="col-12 col-lg-5">
+                            <!-- 会员中心卡片 -->
+                            <div class="card shadow-community lift mb-4">
                                 <div class="card-body">
                                     <div class="d-flex align-items-center mb-3">
                                         <div class="fs-1 me-3">👤</div>
@@ -107,10 +103,40 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- 申请成为团长卡片（仅普通用户可见） -->
+                            <div id="apply-leader-card" style="display:none">
+                                <div class="card shadow-deal lift" style="border: 2px solid rgba(255, 149, 0, 0.3);">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="fs-1 me-3">👑</div>
+                                            <div>
+                                                <h5 class="card-title mb-1">成为社区团长</h5>
+                                                <div class="text-muted small">组织拼单，服务邻里，赚取佣金</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="fw-semibold mb-2">团长权益：</h6>
+                                            <ul class="mb-0 ps-3">
+                                                <li class="text-muted small mb-1">✨ 发起拼单，自由选择商品和时间</li>
+                                                <li class="text-muted small mb-1">💰 每笔订单获得佣金收益</li>
+                                                <li class="text-muted small mb-1">📊 专属团长管理后台</li>
+                                                <li class="text-muted small mb-1">🏆 优先享受平台新功能和活动</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <button class="btn btn-warning btn-lg w-100 mb-2" onclick="showLeaderApplicationForm()">
+                                            立即申请
+                                        </button>
+                                        <div class="text-muted small text-center">审核时间：1-3个工作日</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- 个人资料卡片 -->
-                        <div class="col-12 col-lg-6">
+                        <!-- 右侧栏 - 个人资料卡片 -->
+                        <div class="col-12 col-lg-7">
                             <div class="card shadow-community lift">
                                 <div class="card-body">
                                     <div class="d-flex align-items-center mb-3">
@@ -153,22 +179,6 @@
                             </div>
                         </div>
 
-                        <!-- 订单历史摘要 -->
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0">📦 最近订单</h6>
-                                        <a href="/orders.html" class="btn btn-outline-primary btn-sm">查看全部</a>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div id="recent-orders">
-                                        <!-- 最近订单列表 -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </main>
@@ -185,10 +195,9 @@
         if (!tokens.access) { window.location.href = '/login.html'; return; }
         
         // 加载用户基本信息和会员信息
-        const [meRes, tiersRes, ordersRes] = await Promise.all([
+        const [meRes, tiersRes] = await Promise.all([
           window.api.fetchAPI('/api/users/me/'),
-          window.api.fetchAPI('/api/memberships/tiers/').catch(() => null),
-          window.api.fetchAPI('/api/me/orders/?limit=3').catch(() => null)
+          window.api.fetchAPI('/api/memberships/tiers/').catch(() => null)
         ]);
         
         if (!meRes.ok) return;
@@ -243,17 +252,12 @@
         
         // 加载角色信息（管理员/团长）
         loadRoleInfo(me);
-        
-        // 加载最近订单
-        if (ordersRes && ordersRes.ok) {
-          const orders = await ordersRes.json();
-          loadRecentOrders(orders);
-        }
       }
       
       function loadRoleInfo(user) {
         const adminArea = document.getElementById('admin-info-area');
         const leaderArea = document.getElementById('leader-info-area');
+        const applyLeaderCard = document.getElementById('apply-leader-card');
         
         // 显示管理员信息
         if (adminArea) {
@@ -264,49 +268,12 @@
         if (leaderArea) {
           leaderArea.style.display = user.role === 'leader' ? '' : 'none';
         }
-      }
-      
-      function loadRecentOrders(orders) {
-        const container = document.getElementById('recent-orders');
-        if (!orders || orders.length === 0) {
-          container.innerHTML = '<div class="text-muted text-center py-3">暂无订单记录</div>';
-          return;
+        
+        // 显示申请成为团长卡片（仅普通用户可见）
+        if (applyLeaderCard) {
+          const isNormalUser = user.role !== 'admin' && user.role !== 'leader';
+          applyLeaderCard.style.display = isNormalUser ? '' : 'none';
         }
-
-        const formatDate = (iso) => {
-          const d = new Date(iso);
-          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        };
-
-        const toStatus = (status) => {
-          if (status === 'completed') return { cls: 'success', text: '已完成' };
-          if (status === 'successful') return { cls: 'primary', text: '成功' };
-          if (status === 'ready_for_pickup') return { cls: 'info', text: '待提货' };
-          if (status === 'pending_payment') return { cls: 'warning', text: '待支付' };
-          if (status === 'canceled') return { cls: 'secondary', text: '已取消' };
-          return { cls: 'warning', text: '进行中' };
-        };
-
-        const items = orders.map(order => {
-          const st = toStatus(order.status);
-          const title = order.product_name ? `${order.product_name} × ${order.quantity || 1}` : `订单 #${order.id}`;
-          const meta = `订单 #${order.id} · ${formatDate(order.created_at)}`;
-          const amount = `¥${(order.total_price ?? order.amount ?? 0)}`;
-
-        return `
-          <li class="list-apple__item">
-            <div class="list-apple__left">
-              <div class="list-apple__title">${title}</div>
-              <div class="list-apple__meta">${meta}</div>
-            </div>
-            <div class="list-apple__right">
-              <div class="fw-semibold">${amount}</div>
-              <span class="badge text-bg-${st.cls}">${st.text}</span>
-            </div>
-          </li>`;
-        }).join('');
-
-        container.innerHTML = `<ul class="list-apple">${items}</ul>`;
       }
       
       // 团长申请相关函数

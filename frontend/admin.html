@@ -4,6 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>管理员仪表盘 - 社区团购</title>
+    <!-- 性能优化：预连接CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- 关键CSS：防止emoji闪烁 -->
+    <style>
+        body,*{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",sans-serif!important}
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/apple-theme.css" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
@@ -120,7 +126,9 @@
                                 <thead>
                                     <tr>
                                         <th class="px-4 py-3 fw-semibold">ID</th>
+                                        <th class="px-4 py-3 fw-semibold">图片</th>
                                         <th class="px-4 py-3 fw-semibold">商品名称</th>
+                                        <th class="px-4 py-3 fw-semibold text-center">分类</th>
                                         <th class="px-4 py-3 fw-semibold text-center">价格</th>
                                         <th class="px-4 py-3 fw-semibold text-center">库存</th>
                                         <th class="px-4 py-3 fw-semibold text-center">操作</th>
@@ -157,9 +165,29 @@
                     <form id="product-form">
                         <input type="hidden" id="product-id">
                         <div class="mb-2"><label class="form-label">名称</label><input class="form-control" id="product-name" required></div>
+                        <div class="mb-2"><label class="form-label">分类</label>
+                            <select class="form-select" id="product-category">
+                                <option value="">请选择分类</option>
+                                <option value="1">🍎 果蔬</option>
+                                <option value="2">🥩 肉蛋</option>
+                                <option value="3">🧴 日用</option>
+                            </select>
+                        </div>
                         <div class="mb-2"><label class="form-label">价格</label><input class="form-control" id="product-price" type="number" step="0.01" required></div>
                         <div class="mb-2"><label class="form-label">库存</label><input class="form-control" id="product-stock" type="number" required></div>
-                        <div class="mb-2"><label class="form-label">图片</label><input class="form-control" id="product-image" type="file" accept="image/*"></div>
+                        <div class="mb-2">
+                            <label class="form-label">图片</label>
+                            <div class="d-flex gap-2 align-items-start">
+                                <input class="d-none" id="product-image" type="file" accept="image/jpeg,image/png,image/jpg,image/webp">
+                                <button type="button" class="btn btn-outline-primary" id="select-image-btn">
+                                    📁 选择图片
+                                </button>
+                                <span class="text-muted small align-self-center">支持 JPG、PNG、WEBP 格式，最大 5MB</span>
+                            </div>
+                            <div id="image-preview-container" class="mt-2" style="display: none;">
+                                <img id="image-preview" src="" alt="图片预览" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" id="save-product">保存</button></div>

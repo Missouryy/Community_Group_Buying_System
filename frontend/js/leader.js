@@ -24,9 +24,9 @@
             <h5 class="card-title">${g.product}</h5>
             <p class="card-text">目标：${g.target_participants}，当前：${g.current_participants}</p>
             <div class="progress"><div class="progress-bar" style="width:${progress}%">${progress}%</div></div>
-            <div class="mt-2 d-flex gap-2">
-              <button class="btn btn-outline-primary btn-sm" data-view-orders="${g.id}">查看订单</button>
+            <div class="mt-3 d-flex gap-2">
               ${g.status === 'pending' ? `<button class="btn btn-success btn-sm" data-start-gb="${g.id}">立即开始</button>` : ''}
+              <button class="btn btn-outline-primary btn-sm" data-view-orders="${g.id}">查看订单</button>
             </div>
           </div>
         </div>`;
@@ -543,9 +543,6 @@
       const detailsCard = document.createElement('div');
       detailsCard.className = 'card';
       detailsCard.innerHTML = `
-        <div class="card-header">
-          <h6 class="mb-0">📋 提成明细</h6>
-        </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-borderless mb-0">

@@ -4,10 +4,10 @@ echo "🛑 正在停止所有服务..."
 echo ""
 
 # 1. 停止Django后端 (端口 8000)
-echo "📋 停止Django后端 (端口 8000)..."
+echo "📋 停止Django后端..."
 BACKEND_PIDS=$(lsof -ti tcp:8000 2>/dev/null)
 if [ -n "$BACKEND_PIDS" ]; then
-    echo "   找到进程: $BACKEND_PIDS"
+    echo "   端口 8000: $BACKEND_PIDS"
     kill -9 $BACKEND_PIDS 2>/dev/null
     echo "   ✅ 已终止"
 else

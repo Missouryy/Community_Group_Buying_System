@@ -10,6 +10,8 @@
   backdrop-filter: blur(12px) saturate(120%);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .glass-dark {
@@ -26,9 +28,9 @@
   backdrop-filter: blur(8px) saturate(120%);
 }
 
-/* Login background with emoji pattern */
+/* Login background with emoji pattern - 仅用于登录页面 */
 
-.login-bg {
+body.login-bg {
   min-height: 100vh;
   background: #82e0b1;
   position: relative;
@@ -36,8 +38,8 @@
   color: #061c13;
 }
 
-.login-bg::before,
-.login-bg::after {
+body.login-bg::before,
+body.login-bg::after {
   content: none;
 }
 
@@ -56,16 +58,16 @@
   100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.68; }
 }
 
-/* 上层 emoji 点状分布容器 */
-.emoji-field {
+/* 上层 emoji 点状分布容器 - 仅用于登录页面 */
+body.login-bg .emoji-field {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   mix-blend-mode: normal;
 }
 
-.emoji-field .emoji {
+body.login-bg .emoji-field .emoji {
   position: absolute;
   opacity: 0.78;
   line-height: 1;

@@ -72,11 +72,51 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """订单列表序列化器，包含便于前端显示的额外字段"""
     items = OrderItemSerializer(many=True, read_only=True)
+    product_name = serializers.SerializerMethodField()
+    leader_name = serializers.SerializerMethodField()
+    price_per_unit = serializers.SerializerMethodField()
+    quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = '__all__'
+
+    def get_product_name(self, obj):
+        try:
+            return obj.group_buy.product.name if obj.group_buy and obj.group_buy.product else '未知商品'
+        except:
+            return '未知商品'
+
+    def get_leader_name(self, obj):
+        try:
+            if obj.group_buy and obj.group_buy.leader:
+                return obj.group_buy.leader.real_name or obj.group_buy.leader.username
+            return '未知团长'
+        except:
+            return '未知团长'
+
+    def get_price_per_unit(self, obj):
+        try:
+            # 优先从 OrderItem 获取单价
+            first_item = obj.items.first()
+            if first_item:
+                return str(first_item.price_per_unit)
+            # 降级从拼单商品获取
+            if obj.group_buy and obj.group_buy.product:
+                return str(obj.group_buy.product.price)
+            return '0.00'
+        except:
+            return '0.00'
+
+    def get_quantity(self, obj):
+        try:
+            # 汇总所有 OrderItem 的数量
+            total = sum(item.quantity for item in obj.items.all())
+            return total if total > 0 else 1
+        except:
+            return 1
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):

@@ -8,7 +8,7 @@ from .admin_views import (
 )
 from .leader_views import LeaderGroupBuyListCreateView, LeaderGroupBuyOrdersView, LeaderConfirmPickupView, LeaderStartGroupBuyView
 from .user_views import (
-    JoinGroupBuyView, GroupBuyPublicListView, MyOrdersView,
+    JoinGroupBuyView, GroupBuyPublicListView, MyOrdersView, MyOrderDetailView,
     MeView, OrderConfirmView, OrderReviewView, ProductReviewsListView,
     MembershipTierListView, ProductPublicListView
 )
@@ -51,6 +51,7 @@ urlpatterns = [
     path('group-buys/<int:id>/join/', JoinGroupBuyView.as_view(), name='group-buys-join'),
     path('orders/join/', JoinGroupBuyView.as_view(), name='orders-join'),
     path('me/orders/', MyOrdersView.as_view(), name='me-orders'),
+    path('me/orders/<int:id>/', MyOrderDetailView.as_view(), name='me-orders-detail'),
     path('users/me/', EnhancedMeView.as_view(), name='users-me'),  # 使用增强版本
     path('memberships/tiers/', MembershipTierListView.as_view(), name='memberships-tiers'),
     path('orders/<int:id>/confirm/', OrderConfirmView.as_view(), name='orders-confirm'),

@@ -7,6 +7,33 @@
     const { access } = window.api.getTokens();
     if (!access) window.location.href = '/login.html';
   }
+  
+  // 统一的状态标签映射
+  const STATUS_BADGES = {
+    groupbuy: {
+      'pending': { badge: 'warning', icon: '⏰', text: '待开始' },
+      'active': { badge: 'success', icon: '🔥', text: '进行中' },
+      'successful': { badge: 'primary', icon: '✅', text: '已成团' },
+      'failed': { badge: 'danger', icon: '❌', text: '已失败' },
+      'canceled': { badge: 'secondary', icon: '🚫', text: '已取消' }
+    },
+    order: {
+      'pending_payment': { badge: 'warning', icon: '💳', text: '待支付' },
+      'awaiting_group_success': { badge: 'info', icon: '⏳', text: '待成团' },
+      'successful': { badge: 'success', icon: '✅', text: '已成团' },
+      'ready_for_pickup': { badge: 'primary', icon: '📦', text: '待提货' },
+      'completed': { badge: 'success', icon: '🎉', text: '已完成' },
+      'canceled': { badge: 'secondary', icon: '❌', text: '已取消' }
+    }
+  };
+  
+  // 获取状态标签HTML
+  function getStatusBadge(type, status) {
+    const statusConfig = STATUS_BADGES[type]?.[status] || { badge: 'secondary', icon: '', text: status };
+    return `<span class="badge text-bg-${statusConfig.badge}" style="font-size: 0.8rem; padding: 0.35rem 0.65rem;">
+      ${statusConfig.icon} ${statusConfig.text}
+    </span>`;
+  }
 
   async function loadProducts() {
     const res = await window.api.fetchAPI('/api/admin/products/');
@@ -16,7 +43,7 @@
     tbody.innerHTML = '';
     
     if (data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5">
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5">
         <div class="mb-3" style="font-size: 3rem;">📦</div>
         <div class="text-muted">暂无商品数据</div>
         <div class="text-muted small mt-1">点击上方"添加新商品"按钮开始添加</div>
@@ -32,13 +59,29 @@
       const stockClass = p.stock_quantity <= 10 ? 'danger' : p.stock_quantity <= 50 ? 'warning' : 'success';
       const stockIcon = p.stock_quantity <= 10 ? '⚠️' : p.stock_quantity <= 50 ? '⚡' : '✅';
       
+      // 分类图标和名称
+      const categoryMap = {
+        1: { icon: '🍎', name: '果蔬' },
+        2: { icon: '🥩', name: '肉蛋' },
+        3: { icon: '🧴', name: '日用' }
+      };
+      const category = categoryMap[p.category] || { icon: '📦', name: '未分类' };
+      
       tr.innerHTML = `
         <td class="px-4 py-3">
           <span class="fw-semibold text-primary" style="font-family: 'SF Mono', Monaco, monospace;">#${p.id}</span>
         </td>
         <td class="px-4 py-3">
+          ${p.image ? `<img src="${p.image}" alt="${p.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` : '<div style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">📷</div>'}
+        </td>
+        <td class="px-4 py-3">
           <div class="fw-semibold" style="color: #1d1d1f;">${p.name}</div>
           ${p.description ? `<div class="text-muted small" style="font-size: 0.8rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.description}</div>` : ''}
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="badge text-bg-light text-dark" style="font-size: 0.85rem; padding: 0.4rem 0.75rem;">
+            ${category.icon} ${category.name}
+          </span>
         </td>
         <td class="px-4 py-3 text-center">
           <span class="fw-bold" style="color: #34C759; font-size: 1rem;">¥${parseFloat(p.price).toFixed(2)}</span>
@@ -73,15 +116,40 @@
   function openModal(product) {
     document.getElementById('product-id').value = product?.id || '';
     document.getElementById('product-name').value = product?.name || '';
+    document.getElementById('product-category').value = product?.category || '';
     document.getElementById('product-price').value = product?.price || '';
     document.getElementById('product-stock').value = product?.stock_quantity || '';
     document.getElementById('product-image').value = '';
+    
+    // 重置图片选择按钮
+    const selectBtn = document.getElementById('select-image-btn');
+    if (selectBtn) {
+      selectBtn.innerHTML = '📁 选择图片';
+      selectBtn.classList.remove('btn-success');
+      selectBtn.classList.add('btn-outline-primary');
+    }
+    
+    // 显示现有图片预览
+    const previewContainer = document.getElementById('image-preview-container');
+    const previewImg = document.getElementById('image-preview');
+    if (product?.image) {
+      previewImg.src = product.image;
+      previewContainer.style.display = 'block';
+      // 如果有现有图片，显示为"更换图片"
+      if (selectBtn) {
+        selectBtn.innerHTML = '🔄 更换图片';
+      }
+    } else {
+      previewContainer.style.display = 'none';
+    }
+    
     modal.show();
   }
 
   async function saveProduct() {
     const id = document.getElementById('product-id').value;
     const name = document.getElementById('product-name').value.trim();
+    const category = document.getElementById('product-category').value;
     const price = document.getElementById('product-price').value;
     const stock = document.getElementById('product-stock').value;
     
@@ -99,11 +167,29 @@
       return;
     }
     
+    // 图片验证
+    const file = document.getElementById('product-image').files[0];
+    if (file) {
+      // 验证文件类型
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('图片格式不支持，请上传 JPG、PNG 或 WEBP 格式的图片');
+        return;
+      }
+      
+      // 验证文件大小（最大5MB）
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('图片文件过大，请上传小于 5MB 的图片');
+        return;
+      }
+    }
+    
     const form = new FormData();
     form.append('name', name);
+    if (category) form.append('category', category);
     form.append('price', String(parseFloat(price)));
     form.append('stock_quantity', String(parseInt(stock, 10)));
-    const file = document.getElementById('product-image').files[0];
     if (file) form.append('image', file);
     
     try {
@@ -132,6 +218,63 @@
   function bindEvents() {
     document.getElementById('btn-create')?.addEventListener('click', () => openModal(null));
     document.getElementById('save-product')?.addEventListener('click', saveProduct);
+    
+    // 图片选择按钮
+    document.getElementById('select-image-btn')?.addEventListener('click', () => {
+      document.getElementById('product-image')?.click();
+    });
+    
+    // 图片实时预览
+    document.getElementById('product-image')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const previewContainer = document.getElementById('image-preview-container');
+      const previewImg = document.getElementById('image-preview');
+      const selectBtn = document.getElementById('select-image-btn');
+      
+      if (file) {
+        // 验证文件类型
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          alert('图片格式不支持，请上传 JPG、PNG 或 WEBP 格式的图片');
+          e.target.value = '';
+          previewContainer.style.display = 'none';
+          if (selectBtn) selectBtn.innerHTML = '📁 选择图片';
+          return;
+        }
+        
+        // 验证文件大小
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          alert('图片文件过大，请上传小于 5MB 的图片');
+          e.target.value = '';
+          previewContainer.style.display = 'none';
+          if (selectBtn) selectBtn.innerHTML = '📁 选择图片';
+          return;
+        }
+        
+        // 更新按钮文本
+        if (selectBtn) {
+          selectBtn.innerHTML = '✅ 已选择图片';
+          selectBtn.classList.remove('btn-outline-primary');
+          selectBtn.classList.add('btn-success');
+        }
+        
+        // 显示预览
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          previewImg.src = event.target.result;
+          previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewContainer.style.display = 'none';
+        if (selectBtn) {
+          selectBtn.innerHTML = '📁 选择图片';
+          selectBtn.classList.remove('btn-success');
+          selectBtn.classList.add('btn-outline-primary');
+        }
+      }
+    });
     productsTableBody()?.addEventListener('click', async (e) => {
       const target = e.target.closest('button');
       if (!target) return;
@@ -437,7 +580,7 @@
             <div class="text-muted small" style="font-size: 0.8rem;">本月</div>
           </td>
           <td class="px-4 py-3 text-center">
-            <span class="badge text-bg-success" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">✅ 活跃</span>
+            <span class="badge text-bg-${u.is_active !== false ? 'success' : 'secondary'}" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">${u.is_active !== false ? '✅活跃' : '⛔️停用'}</span>
           </td>
           <td class="px-4 py-3 text-center">
             <div class="d-flex gap-2 justify-content-center">
@@ -445,9 +588,9 @@
                       style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
                 详情
               </button>
-              <button class="btn btn-sm btn-outline-danger" data-deactivate="${u.id}"
+              <button class="btn btn-sm ${u.is_active !== false ? 'btn-outline-danger' : 'btn-outline-primary'}" data-toggle-status="${u.id}" data-current-status="${u.is_active !== false}"
                       style="border-radius: 8px; padding: 0.375rem 0.875rem; font-size: 0.875rem;">
-                停用
+                ${u.is_active !== false ? '停用' : '启用'}
               </button>
             </div>
           </td>`;
@@ -477,7 +620,7 @@
     const rejectBtn = e.target.closest('button[data-reject]');
     if (rejectBtn) {
       const userId = rejectBtn.getAttribute('data-reject');
-      const reason = prompt('请输入拒绝原因（可选）：');
+      const reason = prompt('请输入拒绝原因：');
       if (reason !== null) {
         const res = await window.api.fetchAPI(`/api/admin/leaders/${userId}/reject/`, { 
           method: 'POST', 
@@ -499,14 +642,19 @@
       showLeaderDetails(userId);
     }
     
-    // 停用团长
-    const deactivateBtn = e.target.closest('button[data-deactivate]');
-    if (deactivateBtn) {
-      const userId = deactivateBtn.getAttribute('data-deactivate');
-      if (confirm('确认停用该团长？停用后将无法发起新的拼单。')) {
+    // 切换团长状态（停用/启用）
+    const toggleStatusBtn = e.target.closest('button[data-toggle-status]');
+    if (toggleStatusBtn) {
+      const userId = toggleStatusBtn.getAttribute('data-toggle-status');
+      const isCurrentlyActive = toggleStatusBtn.getAttribute('data-current-status') === 'true';
+      const action = isCurrentlyActive ? '停用' : '启用';
+      const confirmMsg = isCurrentlyActive ? '确认停用该团长？停用后将无法发起新的拼单。' : '确认启用该团长？';
+      
+      if (confirm(confirmMsg)) {
         const res = await window.api.fetchAPI(`/api/admin/leaders/${userId}/deactivate/`, { method: 'POST' });
         if (res.ok) {
-          alert('已停用');
+          const data = await res.json();
+          alert(data.message || `已${action}`);
           loadLeaderApplications();
         } else {
           alert('操作失败，请重试');
@@ -517,13 +665,18 @@
   
   // 显示团长详情
   async function showLeaderDetails(userId) {
-    const res = await window.api.fetchAPI(`/api/admin/leaders/${userId}/details/`);
-    if (!res.ok) {
-      alert('获取详情失败');
-      return;
-    }
-    
-    const details = await res.json();
+    try {
+      const res = await window.api.fetchAPI(`/api/admin/leaders/${userId}/details/`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || errorData.detail || '获取详情失败';
+        alert(`错误：${errorMsg}`);
+        console.error('获取团长详情失败:', res.status, errorData);
+        return;
+      }
+      
+      const details = await res.json();
+      console.log('团长详情数据:', details);
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.innerHTML = `
@@ -537,7 +690,7 @@
             <div class="row g-4">
               <div class="col-md-6">
                 <div class="card">
-                  <div class="card-body">
+          <div class="card-body">
                     <h6 class="card-title">基本信息</h6>
                     <div class="vstack gap-2">
                       <div><strong>姓名：</strong>${details.real_name || details.username}</div>
@@ -585,7 +738,7 @@
                               <tr>
                                 <td>${gb.product_name}</td>
                                 <td>${gb.current_participants}/${gb.target_participants}</td>
-                                <td><span class="badge text-bg-${gb.status === 'active' ? 'success' : 'secondary'}">${gb.status}</span></td>
+                                <td>${getStatusBadge('groupbuy', gb.status)}</td>
                                 <td>${new Date(gb.created_at).toLocaleDateString()}</td>
                               </tr>
                             `).join('')}
@@ -608,6 +761,10 @@
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
     modal.addEventListener('hidden.bs.modal', () => modal.remove());
+    } catch (error) {
+      console.error('显示团长详情时出错:', error);
+      alert('加载团长详情失败: ' + error.message);
+    }
   }
 
   // 订单管理功能
@@ -681,14 +838,6 @@
       }
     
     orders.forEach((order, index) => {
-      const statusBadges = {
-        'pending_payment': '<span class="badge text-bg-warning" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">💳 待支付</span>',
-        'awaiting_group_success': '<span class="badge text-bg-info" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">⏳ 待成团</span>',
-        'successful': '<span class="badge text-bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">✅ 已成团</span>',
-        'ready_for_pickup': '<span class="badge text-bg-primary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">📦 待提货</span>',
-        'completed': '<span class="badge text-bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">🎉 已完成</span>',
-        'canceled': '<span class="badge text-bg-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">❌ 已取消</span>'
-      };
       
       const tr = document.createElement('tr');
       tr.style.cssText = 'transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0;';
@@ -712,7 +861,7 @@
         <td class="px-4 py-3">
           <span class="fw-bold" style="color: #34C759; font-size: 1rem;">¥${parseFloat(order.total_price).toFixed(2)}</span>
         </td>
-        <td class="px-4 py-3 text-center">${statusBadges[order.status] || order.status}</td>
+        <td class="px-4 py-3 text-center">${getStatusBadge('order', order.status)}</td>
         <td class="px-4 py-3">
           <div class="text-muted small" style="font-size: 0.8rem; line-height: 1.4;">
             ${new Date(order.created_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}<br>
@@ -830,11 +979,6 @@
     
     html += '</ul></nav>';
     
-    // 添加统计信息
-    html += `<div class="text-center text-muted small mt-2" style="font-size: 0.875rem;">
-      显示第 ${((currentPage - 1) * pageSize) + 1} - ${Math.min(currentPage * pageSize, total)} 条，共 ${total} 条订单
-    </div>`;
-    
     container.innerHTML = html;
   }
   
@@ -912,7 +1056,7 @@
                     <div class="vstack gap-2">
                       <div><strong>商品：</strong>${order.group_buy.product_name}</div>
                       <div><strong>团长：</strong>${order.group_buy.leader_name}</div>
-                      <div><strong>数量：</strong>${order.quantity}</div>
+                      <div><strong>数量：</strong>${order.items && order.items.length > 0 ? order.items.reduce((sum, item) => sum + item.quantity, 0) : (order.quantity || 0)}</div>
                       <div><strong>总价：</strong>¥${order.total_price}</div>
                     </div>
                   </div>

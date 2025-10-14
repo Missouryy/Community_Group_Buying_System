@@ -4,6 +4,7 @@ from rest_framework import status
 from django.db.models import Count, Sum, F, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
+from decimal import Decimal
 from .models import GroupBuy, Order, User, Product
 
 
@@ -24,11 +25,12 @@ class PublicStatsView(APIView):
             ).aggregate(total=Sum('quantity'))['total'] or 0
             
             # 总节省金额（估算）
-            total_savings = 0
+            total_savings = Decimal('0')
             products = Product.objects.all()
+            price_multiplier = Decimal('1.2')
             for product in products:
                 # 假设原价比拼单价高20%
-                original_price = product.price * 1.2
+                original_price = product.price * price_multiplier
                 savings_per_item = original_price - product.price
                 orders_count = Order.objects.filter(
                     group_buy__product=product,
@@ -56,8 +58,9 @@ class SuccessfulGroupBuysView(APIView):
         limit = int(request.GET.get('limit', 6))
         
         try:
+            # 查询成功的拼单
             successful_groupbuys = GroupBuy.objects.filter(
-                status='completed'
+                status='successful'
             ).select_related('product', 'leader').order_by('-updated_at')[:limit]
             
             results = []
@@ -70,11 +73,12 @@ class SuccessfulGroupBuysView(APIView):
                 
                 # 计算总节省金额
                 if gb.product:
-                    original_price = gb.product.price * 1.2
+                    price_multiplier = Decimal('1.2')
+                    original_price = gb.product.price * price_multiplier
                     savings_per_item = original_price - gb.product.price
                     total_savings = savings_per_item * final_participants
                 else:
-                    total_savings = 0
+                    total_savings = Decimal('0')
                 
                 results.append({
                     'id': gb.id,
@@ -96,14 +100,14 @@ class FeaturedLeadersView(APIView):
         limit = int(request.GET.get('limit', 3))
         
         try:
-            # 查找成功拼单数最多的团长
+            # 查找成功拼单数最多的团长（注意：GroupBuy 的成功状态是 'successful'）
             featured_leaders = User.objects.filter(
                 role='leader',
                 is_active=True
             ).annotate(
                 successful_groupbuys=Count(
-                    'groupbuy_set',
-                    filter=Q(groupbuy_set__status='completed')
+                    'led_groupbuys',
+                    filter=Q(led_groupbuys__status='successful')
                 )
             ).order_by('-successful_groupbuys')[:limit]
             
@@ -159,12 +163,13 @@ class RecommendationsView(APIView):
                 ).order_by('-order_count')[:6]
             
             results = []
+            price_multiplier = Decimal('1.2')
             for product in recommended_products:
                 results.append({
                     'id': product.id,
                     'name': product.name,
                     'price': str(product.price),
-                    'original_price': str(product.price * 1.2),  # 估算原价
+                    'original_price': str(product.price * price_multiplier),  # 估算原价
                     'image': product.image.url if product.image else None,
                     'stock_quantity': product.stock_quantity,
                     'category': getattr(product, 'category', '')

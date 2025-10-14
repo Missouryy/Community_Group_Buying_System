@@ -4,6 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>社区团购 - 首页</title>
+    <!-- 性能优化：预连接CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- 关键CSS：防止emoji闪烁 -->
+    <style>
+        body,*{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",sans-serif!important}
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/apple-theme.css" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
@@ -48,11 +54,8 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex gap-3 flex-wrap">
-                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('food')">
-                        🥬 生鲜蔬菜
-                    </button>
-                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('fruit')">
-                        🍎 新鲜水果
+                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('fresh')">
+                        🥬 生鲜果蔬
                     </button>
                     <button class="btn btn-outline-primary" onclick="filterGroupBuys('meat')">
                         🥩 肉禽蛋类
@@ -75,27 +78,15 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small">排序：</span>
-                <select class="form-select form-select-sm" style="width: auto;" onchange="sortGroupBuys(this.value)">
+                <select class="form-select form-select-sm" style="width: 115px;" onchange="sortGroupBuys(this.value)">
                     <option value="time">最新发布</option>
                     <option value="progress">参团人数</option>
-                    <option value="price">价格低到高</option>
+                    <option value="price">价格升序</option>
                     <option value="ending">即将结束</option>
                 </select>
             </div>
         </div>
         <div id="groupbuy-list" class="row g-3"></div>
-
-        <!-- 成功案例展示 -->
-        <section class="section">
-            <div class="card shadow-community">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">🎉 最近成功的拼单</h5>
-                    <div id="success-stories" class="row g-3">
-                        <!-- 成功案例将由JavaScript动态填充 -->
-                    </div>
-                </div>
-            </div>
-        </section>
 
         <!-- 个性化推荐 -->
         <section class="section">
@@ -104,30 +95,13 @@
                     <h5 class="m-0">💡 为你推荐</h5>
                     <div class="text-muted small">基于你的购买历史和兴趣</div>
                 </div>
-                <a href="#" class="btn btn-outline-secondary btn-sm" id="refresh-recos">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="refresh-recos">
                     🔄 换一批
-                </a>
+                </button>
             </div>
             <div id="reco-list" class="row g-3"></div>
         </section>
 
-        <!-- 社区团长推荐 -->
-        <section class="section">
-            <div class="card shadow-deal">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h5 class="card-title mb-1">👑 优秀团长</h5>
-                            <div class="text-muted small">为社区服务的热心邻居</div>
-                        </div>
-                        <a href="/profile.html" id="leader-cta-btn" class="btn btn-warning btn-sm">申请成为团长</a>
-                    </div>
-                    <div id="featured-leaders" class="row g-3">
-                        <!-- 团长推荐将由JavaScript动态填充 -->
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
 
     <!-- Join Modal -->
@@ -150,17 +124,21 @@
                         <input type="hidden" id="join-id">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" id="join-submit">立即参团</button>
-                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
-                            <span class="visually-hidden">支付方式</span>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="join-submit">
+                            立即参团
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" data-payment="wechat">💬 微信支付</a></li>
-                            <li><a class="dropdown-item" href="#" data-payment="alipay">💰 支付宝支付</a></li>
-                        </ul>
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                支付方式
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" data-payment="wechat">💬 微信支付</a></li>
+                                <li><a class="dropdown-item" href="#" data-payment="alipay">💰 支付宝支付</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -183,33 +161,6 @@
             window.navSystem.setWebSocketStatus(status, status === 'connected' ? '实时连接' : '连接断开');
           };
         }
-        
-        // Refresh recos handler
-        document.getElementById('refresh-recos')?.addEventListener('click', (e) => {
-          e.preventDefault();
-          window.dispatchEvent(new CustomEvent('refresh-recommendations'));
-        });
-
-        // 根据角色更新“申请成为团长/进入门户”按钮
-        try {
-          const cta = document.getElementById('leader-cta-btn');
-          if (cta && window.navSystem && typeof window.navSystem.getUserRole === 'function') {
-            const role = window.navSystem.getUserRole();
-            if (role === 'leader') {
-              cta.href = '/leader.html';
-              cta.textContent = '进入团长门户';
-              cta.className = 'btn btn-primary btn-sm';
-            } else if (role === 'admin') {
-              cta.href = '/admin.html';
-              cta.textContent = '进入管理后台';
-              cta.className = 'btn btn-primary btn-sm';
-            } else {
-              cta.href = '/profile.html';
-              cta.textContent = '申请成为团长';
-              cta.className = 'btn btn-warning btn-sm';
-            }
-          }
-        } catch (e) {}
       });
     </script>
 </body>

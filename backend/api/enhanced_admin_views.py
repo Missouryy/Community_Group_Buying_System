@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
+from decimal import Decimal
 from .models import GroupBuy, Order, User, Product
 from .permissions import IsAdminRole
 
@@ -71,7 +72,7 @@ class AdminLeaderDetailsView(APIView):
             groupbuy_count = GroupBuy.objects.filter(leader=user).count()
             successful_groupbuys = GroupBuy.objects.filter(
                 leader=user, 
-                status='completed'
+                status='successful'
             ).count()
             
             total_orders = Order.objects.filter(
@@ -79,17 +80,18 @@ class AdminLeaderDetailsView(APIView):
                 status__in=['successful', 'completed']
             ).count()
             
-            # 提成计算
+            # 提成计算（10%提成）
+            commission_rate = Decimal('0.1')
             orders = Order.objects.filter(
                 group_buy__leader=user,
                 status__in=['successful', 'completed']
             )
-            total_commission = sum(order.total_price * 0.1 for order in orders)
+            total_commission = sum((order.total_price * commission_rate) for order in orders) if orders.exists() else Decimal('0')
             
             # 本月提成
             current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             monthly_orders = orders.filter(created_at__gte=current_month)
-            monthly_commission = sum(order.total_price * 0.1 for order in monthly_orders)
+            monthly_commission = sum((order.total_price * commission_rate) for order in monthly_orders) if monthly_orders.exists() else Decimal('0')
             
             # 最近拼单
             recent_groupbuys = GroupBuy.objects.filter(
@@ -112,6 +114,7 @@ class AdminLeaderDetailsView(APIView):
                 'username': user.username,
                 'real_name': user.real_name,
                 'email': user.email,
+                'is_active': user.is_active,
                 'phone': getattr(user, 'phone', ''),
                 'address': getattr(user, 'address', ''),
                 'date_joined': user.date_joined.isoformat(),
@@ -129,16 +132,18 @@ class AdminLeaderDetailsView(APIView):
 
 
 class AdminLeaderDeactivateView(APIView):
-    """停用团长"""
+    """停用/启用团长"""
     permission_classes = [IsAuthenticated, IsAdminRole]
     
     def post(self, request, user_id):
         try:
             user = User.objects.get(id=user_id, role='leader')
-            user.is_active = False
+            # 切换激活状态
+            user.is_active = not user.is_active
             user.save()
             
-            return Response({'success': True, 'message': '团长已停用'})
+            status_text = '已启用' if user.is_active else '已停用'
+            return Response({'success': True, 'message': f'团长{status_text}', 'is_active': user.is_active})
         except User.DoesNotExist:
             return Response({'error': '团长不存在'}, status=404)
         except Exception as e:

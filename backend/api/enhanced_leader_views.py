@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
+from decimal import Decimal
 from .models import GroupBuy, Order, User, Product
 from .permissions import IsLeaderRole
 
@@ -28,15 +29,16 @@ class LeaderStatsView(APIView):
             ).count()
             
             # 本月提成（估算）
+            commission_rate = Decimal('0.1')
             monthly_orders = Order.objects.filter(
                 group_buy__leader=leader,
                 status__in=['successful', 'completed'],
                 created_at__gte=current_month
             )
-            monthly_commission = 0
+            monthly_commission = Decimal('0')
             for order in monthly_orders:
                 # 假设提成比例为10%
-                commission = order.total_price * 0.1
+                commission = order.total_price * commission_rate
                 monthly_commission += commission
             
             # 总收益（估算）
@@ -44,9 +46,9 @@ class LeaderStatsView(APIView):
                 group_buy__leader=leader,
                 status__in=['successful', 'completed']
             )
-            total_earnings = 0
+            total_earnings = Decimal('0')
             for order in all_orders:
-                commission = order.total_price * 0.1
+                commission = order.total_price * commission_rate
                 total_earnings += commission
             
             return Response({
@@ -106,17 +108,18 @@ class LeaderCommissionsSummaryView(APIView):
         try:
             leader = request.user
             current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            commission_rate = Decimal('0.1')
             
             # 总收益
             all_orders = Order.objects.filter(
                 group_buy__leader=leader,
                 status__in=['successful', 'completed']
             )
-            total_earnings = sum(order.total_price * 0.1 for order in all_orders)
+            total_earnings = sum((order.total_price * commission_rate) for order in all_orders) if all_orders.exists() else Decimal('0')
             
             # 本月收益
             monthly_orders = all_orders.filter(created_at__gte=current_month)
-            monthly_earnings = sum(order.total_price * 0.1 for order in monthly_orders)
+            monthly_earnings = sum((order.total_price * commission_rate) for order in monthly_orders) if monthly_orders.exists() else Decimal('0')
             
             # 待结算收益（已完成但未结算的订单）
             pending_orders = Order.objects.filter(
@@ -124,7 +127,7 @@ class LeaderCommissionsSummaryView(APIView):
                 status='completed'
                 # 这里可以添加结算状态字段的过滤
             )
-            pending_earnings = sum(order.total_price * 0.1 for order in pending_orders)
+            pending_earnings = sum((order.total_price * commission_rate) for order in pending_orders) if pending_orders.exists() else Decimal('0')
             
             return Response({
                 'total_earnings': f"{total_earnings:.2f}",
@@ -148,6 +151,7 @@ class LeaderCommissionsView(APIView):
     def get(self, request):
         try:
             leader = request.user
+            commission_rate = Decimal('0.1')
             
             orders = Order.objects.filter(
                 group_buy__leader=leader,
@@ -156,7 +160,7 @@ class LeaderCommissionsView(APIView):
             
             results = []
             for order in orders:
-                commission_amount = order.total_price * 0.1
+                commission_amount = order.total_price * commission_rate
                 results.append({
                     'id': order.id,
                     'created_at': order.created_at.isoformat(),
