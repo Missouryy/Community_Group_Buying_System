@@ -197,7 +197,7 @@ python -m http.server 8080 -d frontend
 ## 环境变量说明（backend/.env）
 
 ```ini
-DB_ENGINE=mysql                  # mysql/mariadb 为真时启用 MySQL；否则回退 sqlite3
+DB_ENGINE=mysql
 DB_NAME=community_group_buying
 DB_USER=root
 DB_PASSWORD=your-password

@@ -16,14 +16,14 @@ from .user_views import (
 from .stats_views import (
     PublicStatsView, SuccessfulGroupBuysView, FeaturedLeadersView, RecommendationsView
 )
-from .enhanced_leader_views import (
+from .leader_extras import (
     LeaderStatsView, LeaderPickupsView, LeaderCommissionsSummaryView, LeaderCommissionsView, LeaderDemoteToUserView
 )
-from .enhanced_admin_views import (
+from .admin_extras import (
     AdminLeaderApproveView, AdminLeaderRejectView, AdminLeaderDetailsView, AdminLeaderDeactivateView
 )
-from .enhanced_user_views import (
-    UserApplyLeaderView, ProductNotifyView, EnhancedMeView
+from .user_extras import (
+    UserApplyLeaderView, ProductNotifyView, MeDetailView
 )
 from .image_upload_views import (
     ImageUploadView, ProductImageUploadView
@@ -52,7 +52,7 @@ urlpatterns = [
     path('orders/join/', JoinGroupBuyView.as_view(), name='orders-join'),
     path('me/orders/', MyOrdersView.as_view(), name='me-orders'),
     path('me/orders/<int:id>/', MyOrderDetailView.as_view(), name='me-orders-detail'),
-    path('users/me/', EnhancedMeView.as_view(), name='users-me'),  # 使用增强版本
+    path('users/me/', MeDetailView.as_view(), name='users-me'),
     path('memberships/tiers/', MembershipTierListView.as_view(), name='memberships-tiers'),
     path('orders/<int:id>/confirm/', OrderConfirmView.as_view(), name='orders-confirm'),
     path('orders/<int:id>/review/', OrderReviewView.as_view(), name='orders-review'),

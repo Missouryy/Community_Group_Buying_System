@@ -70,7 +70,7 @@ window.navSystem = (function() {
       const isActive = isActiveLink(item);
       return `
         <a class="nav-link ${isActive ? 'active' : ''}" href="${item.href}">
-          <span class="nav-apple__link-icon">${item.icon}</span>
+          <span class="nav-link-icon">${item.icon}</span>
           ${item.label}
         </a>
       `;
@@ -80,16 +80,16 @@ window.navSystem = (function() {
     const userActionsHTML = generateUserActionsHTML(role);
 
     return `
-      <nav class="navbar navbar-expand-lg nav-apple sticky-top">
+      <nav class="navbar navbar-expand-lg nav-main sticky-top">
         <div class="container-fluid">
           <!-- 品牌区域 -->
-          <a class="navbar-brand nav-apple__brand" href="/index.html">
-            <div class="nav-apple__brand-icon">🏘️</div>
+          <a class="navbar-brand nav-brand" href="/index.html">
+            <div class="nav-brand-icon">🏘️</div>
             社区团购
           </a>
 
           <!-- 移动端折叠按钮 -->
-          <button class="navbar-toggler nav-apple__toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <button class="navbar-toggler nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon">
               <span></span>
             </span>
@@ -97,11 +97,11 @@ window.navSystem = (function() {
 
           <!-- 导航内容 -->
           <div class="collapse navbar-collapse" id="navbarNav">
-            <div class="navbar-nav me-auto nav-apple__links">
+            <div class="navbar-nav me-auto nav-links">
               ${mainNavHTML}
             </div>
             
-            <div class="nav-apple__actions">
+            <div class="nav-actions">
               ${userActionsHTML}
             </div>
           </div>
@@ -168,7 +168,7 @@ window.navSystem = (function() {
 
     // 移动端导航折叠处理
     document.addEventListener('click', (e) => {
-      const navLink = e.target.closest('.nav-apple__links .nav-link');
+      const navLink = e.target.closest('.nav-links .nav-link');
       if (navLink && window.innerWidth < 992) {
         // 在小屏幕上点击导航链接后自动折叠菜单
         const navbar = document.querySelector('.navbar-collapse');
@@ -215,7 +215,7 @@ window.navSystem = (function() {
    * 更新导航状态
    */
   function updateNavigation() {
-    const currentNav = document.querySelector('.nav-apple');
+    const currentNav = document.querySelector('.nav-main');
     if (currentNav) {
       currentNav.outerHTML = generateNavHTML();
       bindEvents();

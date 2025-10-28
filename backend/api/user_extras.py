@@ -68,8 +68,8 @@ class ProductNotifyView(APIView):
             return Response({'error': str(e)}, status=500)
 
 
-class EnhancedMeView(APIView):
-    """增强的用户信息视图"""
+class MeDetailView(APIView):
+    """用户信息视图"""
     permission_classes = [IsAuthenticated]
     
     def get(self, request):

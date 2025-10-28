@@ -456,7 +456,7 @@
     
     statsCard.innerHTML = `
       <div class="card-body">
-        <h6 class="card-title mb-3">👨‍💼 团长管理概览</h6>
+        <h5 class="m-0 fw-bold">👨‍💼 团长管理</h5>
         <div class="row g-3">
           <div class="col-4">
             <div class="text-center">
@@ -539,7 +539,7 @@
         <h6 class="mb-3">✅ 已批准团长 (${approvedLeaders.length})</h6>
         <div class="card shadow-community">
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 table-apple" style="border-collapse: separate; border-spacing: 0;">
+            <table class="table table-hover align-middle mb-0 table-main" style="border-collapse: separate; border-spacing: 0;">
               <thead>
                 <tr>
                   <th class="px-4 py-3 fw-semibold" style="border-top-left-radius: 12px;">团长信息</th>
@@ -904,7 +904,7 @@
       return;
     }
     
-    let html = '<nav aria-label="订单分页"><ul class="pagination pagination-apple" style="gap: 0.5rem;">';
+    let html = '<nav aria-label="订单分页"><ul class="pagination pagination-main" style="gap: 0.5rem;">';
     
     // 上一页
     const prevDisabled = currentPage === 1;
