@@ -55,9 +55,27 @@
       const tr = document.createElement('tr');
       tr.style.cssText = 'transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0;';
       
-      // 库存状态判断
-      const stockClass = p.stock_quantity <= 10 ? 'danger' : p.stock_quantity <= 50 ? 'warning' : 'success';
-      const stockIcon = p.stock_quantity <= 10 ? '⚠️' : p.stock_quantity <= 50 ? '⚡' : '✅';
+      // 库存状态判断 - 使用商品自己的预警阈值
+      const threshold = p.warning_threshold || 10; // 默认10
+      const warningLevel = threshold * 2; // 警告级别为阈值的2倍
+      
+      let stockClass, stockIcon, stockLabel;
+      if (p.stock_quantity < threshold) {
+        // 低于预警阈值：危险（红色）
+        stockClass = 'danger';
+        stockIcon = '⚠️';
+        stockLabel = `${p.stock_quantity}`;
+      } else if (p.stock_quantity < warningLevel) {
+        // 低于警告级别：警告（黄色）
+        stockClass = 'warning';
+        stockIcon = '⚡';
+        stockLabel = `${p.stock_quantity}`;
+      } else {
+        // 库存充足：成功（绿色）
+        stockClass = 'success';
+        stockIcon = '✅';
+        stockLabel = `${p.stock_quantity}`;
+      }
       
       // 分类图标和名称
       const categoryMap = {
@@ -88,7 +106,7 @@
         </td>
         <td class="px-4 py-3 text-center">
           <span class="badge text-bg-${stockClass}" style="font-size: 0.85rem; padding: 0.4rem 0.75rem;">
-            ${stockIcon} ${p.stock_quantity}
+            ${stockIcon} ${stockLabel}
           </span>
         </td>
         <td class="px-4 py-3 text-center">
@@ -119,6 +137,7 @@
     document.getElementById('product-category').value = product?.category || '';
     document.getElementById('product-price').value = product?.price || '';
     document.getElementById('product-stock').value = product?.stock_quantity || '';
+    document.getElementById('product-threshold').value = product?.warning_threshold || 10;
     document.getElementById('product-image').value = '';
     
     // 重置图片选择按钮
@@ -152,6 +171,7 @@
     const category = document.getElementById('product-category').value;
     const price = document.getElementById('product-price').value;
     const stock = document.getElementById('product-stock').value;
+    const threshold = document.getElementById('product-threshold').value;
     
     // 表单验证
     if (!name) {
@@ -164,6 +184,10 @@
     }
     if (!stock || parseInt(stock, 10) < 0) {
       alert('请输入有效的库存数量');
+      return;
+    }
+    if (!threshold || parseInt(threshold, 10) < 0) {
+      alert('请输入有效的预警阈值');
       return;
     }
     
@@ -190,6 +214,7 @@
     if (category) form.append('category', category);
     form.append('price', String(parseFloat(price)));
     form.append('stock_quantity', String(parseInt(stock, 10)));
+    form.append('warning_threshold', String(parseInt(threshold, 10)));
     if (file) form.append('image', file);
     
     try {
@@ -351,68 +376,362 @@
     const cards = document.getElementById('stats-cards');
     const salesEl = document.getElementById('sales-daily');
     if (!cards) return;
+    
+    // 显示加载状态
+    cards.innerHTML = `
+      <div class="col-12 text-center py-5">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        <span class="text-muted">正在加载数据...</span>
+      </div>`;
+    
     const [statsRes, dailyRes] = await Promise.all([
       window.api.fetchAPI('/api/admin/stats/'),
       window.api.fetchAPI('/api/admin/sales/daily/?days=7')
     ]);
+    
     if (statsRes.ok) {
       const s = await statsRes.json();
       cards.innerHTML = '';
+      
       const items = [
-        { label: '总销售额', value: s.total_sales },
-        { label: '总订单', value: s.total_orders },
-        { label: '已完成订单', value: s.completed_orders },
-        { label: '活跃拼单', value: s.active_groupbuys },
-        { label: '待审核团长', value: s.pending_leaders },
-        { label: '低库存商品数', value: s.low_stock_count },
+        { 
+          label: '总销售额', 
+          value: `¥${parseFloat(s.total_sales || 0).toFixed(2)}`, 
+          icon: '💰', 
+          color: '#34C759',
+          bgColor: 'rgba(52, 199, 89, 0.1)'
+        },
+        { 
+          label: '总订单', 
+          value: s.total_orders || 0, 
+          icon: '📦', 
+          color: '#007AFF',
+          bgColor: 'rgba(0, 122, 255, 0.1)'
+        },
+        { 
+          label: '已完成订单', 
+          value: s.completed_orders || 0, 
+          icon: '✅', 
+          color: '#5856D6',
+          bgColor: 'rgba(88, 86, 214, 0.1)'
+        },
+        { 
+          label: '活跃拼单', 
+          value: s.active_groupbuys || 0, 
+          icon: '🔥', 
+          color: '#FF9500',
+          bgColor: 'rgba(255, 149, 0, 0.1)'
+        },
+        { 
+          label: '待审核团长', 
+          value: s.pending_leaders || 0, 
+          icon: '👑', 
+          color: '#FF2D55',
+          bgColor: 'rgba(255, 45, 85, 0.1)'
+        },
+        { 
+          label: '低库存商品', 
+          value: s.low_stock_count || 0, 
+          icon: '⚠️', 
+          color: '#FF3B30',
+          bgColor: 'rgba(255, 59, 48, 0.1)'
+        },
       ];
+      
       items.forEach(it => {
         const col = document.createElement('div');
-        col.className = 'col-12 col-md-4';
-        col.innerHTML = `<div class="card"><div class="card-body"><div class="text-muted small">${it.label}</div><div class="fs-4">${it.value}</div></div></div>`;
+        col.className = 'col-12 col-sm-6 col-lg-4';
+        col.innerHTML = `
+          <div class="card shadow-community border-0 h-100" style="transition: all 0.3s ease; cursor: pointer;">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center gap-2">
+                  <div style="
+                    width: 48px; 
+                    height: 48px; 
+                    border-radius: 12px; 
+                    background: ${it.bgColor}; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    font-size: 1.5rem;
+                  ">${it.icon}</div>
+                </div>
+              </div>
+              <div class="text-muted mb-1" style="font-size: 0.875rem; font-weight: 500;">${it.label}</div>
+              <div class="fs-3 fw-bold" style="color: ${it.color};">${it.value}</div>
+            </div>
+          </div>`;
+        
+        // 添加悬停效果
+        const card = col.querySelector('.card');
+        card.addEventListener('mouseenter', () => {
+          card.style.transform = 'translateY(-4px)';
+          card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'translateY(0)';
+          card.style.boxShadow = '';
+        });
+        
         cards.appendChild(col);
       });
     }
+    
     if (dailyRes.ok && salesEl) {
       const d = await dailyRes.json();
       salesEl.innerHTML = '';
-      d.items.forEach(it => {
-        const row = document.createElement('div');
-        row.className = 'd-flex justify-content-between align-items-center border rounded p-2';
-        row.innerHTML = `<div class="text-muted small">${it.day}</div><div class="fw-semibold">${it.total}</div><div class="text-muted small">${it.count} 单</div>`;
-        salesEl.appendChild(row);
-      });
+      
+      if (d.items && d.items.length > 0) {
+        // 找出最大值用于计算条形图宽度
+        const maxTotal = Math.max(...d.items.map(it => parseFloat(it.total || 0)));
+        
+        d.items.forEach((it, index) => {
+          const total = parseFloat(it.total || 0);
+          const percentage = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+          
+          const row = document.createElement('div');
+          row.className = 'mb-3';
+          row.style.animation = `fadeInUp 0.3s ease ${index * 0.05}s forwards`;
+          row.style.opacity = '0';
+          
+          row.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="text-muted" style="font-size: 0.875rem; font-weight: 500;">
+                ${it.day}
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">${it.count || 0} 单</span>
+                <span class="fw-bold" style="color: #34C759; font-size: 1.1rem;">¥${total.toFixed(2)}</span>
+              </div>
+            </div>
+            <div style="
+              width: 100%; 
+              height: 8px; 
+              background: #f0f0f0; 
+              border-radius: 4px; 
+              overflow: hidden;
+            ">
+              <div style="
+                width: ${percentage}%; 
+                height: 100%; 
+                background: linear-gradient(90deg, #34C759, #30D158); 
+                border-radius: 4px;
+                transition: width 0.6s ease ${index * 0.1}s;
+              "></div>
+            </div>`;
+          
+          salesEl.appendChild(row);
+        });
+        
+        // 添加淡入动画的CSS
+        if (!document.querySelector('#dashboard-animations')) {
+          const style = document.createElement('style');
+          style.id = 'dashboard-animations';
+          style.textContent = `
+            @keyframes fadeInUp {
+              from {
+                opacity: 0;
+                transform: translateY(10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+      } else {
+        salesEl.innerHTML = `
+          <div class="text-center py-4 text-muted">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+            <div>暂无销售数据</div>
+          </div>`;
+      }
     }
   }
+
+  // 存储所有预警数据
+  let allAlerts = [];
+  let currentAlertFilter = 'unread'; // 当前筛选状态：unread, read, all
 
   async function loadAlerts() {
     const container = document.getElementById('alerts-list');
     if (!container) return;
+    
+    container.innerHTML = `
+      <div class="text-center py-4">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        <span class="text-muted">正在加载预警信息...</span>
+      </div>`;
+    
     const res = await window.api.fetchAPI('/api/admin/alerts/');
-    if (!res.ok) return;
-    const alerts = await res.json();
-    container.innerHTML = '';
-    alerts.forEach(a => {
-      const row = document.createElement('div');
-      row.className = 'd-flex justify-content-between align-items-center border rounded p-2';
-      row.innerHTML = `
-        <div>
-          <div class="fw-semibold">${a.message}</div>
-          <div class="text-muted small">创建时间：${a.created_at || ''}</div>
-        </div>
-        <div>
-          ${a.is_read ? '<span class="badge text-bg-secondary">已读</span>' : `<button class="btn btn-sm btn-primary" data-read="${a.id}">标记已读</button>`}
+    if (!res.ok) {
+      container.innerHTML = `
+        <div class="card shadow-community">
+          <div class="card-body text-center py-5">
+            <div class="mb-3" style="font-size: 3rem;">❌</div>
+            <div class="text-muted">加载预警信息失败</div>
+            <div class="text-muted small mt-1">请检查网络连接或稍后重试</div>
+          </div>
         </div>`;
-      container.appendChild(row);
+      return;
+    }
+    
+    allAlerts = await res.json();
+    renderAlerts(currentAlertFilter);
+  }
+
+  function filterAlerts(filterType) {
+    currentAlertFilter = filterType;
+    
+    // 更新按钮状态
+    document.getElementById('alert-filter-unread').className = 
+      filterType === 'unread' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+    document.getElementById('alert-filter-read').className = 
+      filterType === 'read' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+    document.getElementById('alert-filter-all').className = 
+      filterType === 'all' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+    
+    renderAlerts(filterType);
+  }
+
+  function renderAlerts(filterType) {
+    const container = document.getElementById('alerts-list');
+    if (!container) return;
+    
+    if (allAlerts.length === 0) {
+      container.innerHTML = `
+        <div class="card shadow-community">
+          <div class="card-body text-center py-5">
+            <div class="mb-3" style="font-size: 3rem;">✅</div>
+            <div class="text-muted">暂无库存预警</div>
+            <div class="text-muted small mt-1">所有商品库存充足</div>
+          </div>
+        </div>`;
+      return;
+    }
+    
+    // 根据筛选类型过滤数据
+    let filteredAlerts = allAlerts;
+    let titleIcon = '📄';
+    let titleText = '全部预警';
+    let cardClass = 'shadow-community';
+    
+    if (filterType === 'unread') {
+      filteredAlerts = allAlerts.filter(a => !a.is_read);
+      titleIcon = '🔔';
+      titleText = '未读预警';
+      cardClass = 'shadow-deal';
+    } else if (filterType === 'read') {
+      filteredAlerts = allAlerts.filter(a => a.is_read);
+      titleIcon = '📋';
+      titleText = '已读预警';
+      cardClass = 'shadow-community';
+    }
+    
+    // 如果筛选后无数据
+    if (filteredAlerts.length === 0) {
+      let emptyMessage = '';
+      if (filterType === 'unread') {
+        emptyMessage = '暂无未读预警';
+      } else if (filterType === 'read') {
+        emptyMessage = '暂无已读预警';
+      } else {
+        emptyMessage = '暂无预警记录';
+      }
+      
+      container.innerHTML = `
+        <div class="card shadow-community">
+          <div class="card-body text-center py-5">
+            <div class="mb-3" style="font-size: 3rem;">${titleIcon}</div>
+            <div class="text-muted">${emptyMessage}</div>
+          </div>
+        </div>`;
+      return;
+    }
+    
+    // 渲染预警列表
+    let html = `
+      <div class="card ${cardClass}">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 table-main">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 fw-semibold" style="width: 60%">预警信息</th>
+                <th class="px-4 py-3 fw-semibold">创建时间</th>
+                <th class="px-4 py-3 fw-semibold text-center">${filterType === 'unread' ? '操作' : '状态'}</th>
+              </tr>
+            </thead>
+            <tbody>`;
+    
+    filteredAlerts.forEach(a => {
+      const createdAt = a.created_at ? new Date(a.created_at).toLocaleString('zh-CN') : '未知';
+      const isRead = a.is_read;
+      const rowOpacity = isRead ? 'opacity: 0.7;' : '';
+      const icon = isRead ? '📦' : '⚠️';
+      const textColor = isRead ? 'text-muted' : 'color: #ff9500;';
+      
+      html += `
+        <tr style="transition: all 0.2s ease; border-bottom: 1px solid #f0f0f0; ${rowOpacity}">
+          <td class="px-4 py-3">
+            <div class="d-flex align-items-center">
+              <span class="me-3" style="font-size: 1.5rem;">${icon}</span>
+              <div>
+                <div class="fw-semibold" style="${textColor}">${a.message}</div>
+                <div class="text-muted small mt-1">预警 #${a.id}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-muted small">${createdAt}</div>
+          </td>
+          <td class="px-4 py-3 text-center">`;
+      
+      if (isRead) {
+        html += `<span class="badge text-bg-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">✓ 已读</span>`;
+      } else {
+        html += `<button class="btn btn-sm btn-primary" data-read="${a.id}" style="border-radius: 8px; padding: 0.375rem 0.875rem;">
+                   ✓ 标记已读
+                 </button>`;
+      }
+      
+      html += `
+          </td>
+        </tr>`;
     });
+    
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    
+    container.innerHTML = html;
   }
 
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-read]');
     if (btn) {
       const id = btn.getAttribute('data-read');
+      btn.disabled = true;
+      btn.innerHTML = '处理中...';
+      
       const res = await window.api.fetchAPI(`/api/admin/alerts/${id}/read/`, { method: 'POST' });
-      if (res.ok) loadAlerts();
+      if (res.ok) {
+        // 更新本地数据
+        const alert = allAlerts.find(a => a.id == id);
+        if (alert) {
+          alert.is_read = true;
+        }
+        // 重新渲染当前筛选视图
+        renderAlerts(currentAlertFilter);
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '✓ 标记已读';
+        alert('标记失败，请重试');
+      }
     }
   });
 
@@ -1113,6 +1432,7 @@
   window.loadProducts = loadProducts;
   window.loadLeaderApplications = loadLeaderApplications;
   window.loadAlerts = loadAlerts;
+  window.filterAlerts = filterAlerts;
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureAuth();

@@ -61,11 +61,18 @@
             <div class="col-12 col-md-9 col-lg-10">
             <main>
                 <div id="page-dashboard" class="page">
-                    <div class="row g-3" id="stats-cards"></div>
-                    <div class="card mt-3"><div class="card-body">
-                        <h6 class="card-title">最近 7 天销量</h6>
-                        <div id="sales-daily" class="vstack gap-2"></div>
-                    </div></div>
+                    <div class="row g-3 mb-4" id="stats-cards"></div>
+                    <div class="card shadow-community border-0">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h5 class="fw-bold mb-1">📈 销售趋势</h5>
+                                    <p class="text-muted small mb-0">最近 7 天销售数据</p>
+                                </div>
+                            </div>
+                            <div id="sales-daily"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="page-orders" class="page" style="display:none">
                     <div class="card shadow-community mb-3">
@@ -143,8 +150,30 @@
                     <div id="leaders-table"></div>
                 </div>
                 <div id="page-inventory" class="page" style="display:none">
-                    <h5>库存预警</h5>
-                    <div id="alerts-list" class="vstack gap-2"></div>
+                    <div class="card shadow-community mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <h5 class="m-0 fw-bold">⚠️ 库存预警</h5>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-primary" id="alert-filter-unread" onclick="filterAlerts('unread')">
+                                            🔔 未读
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="alert-filter-read" onclick="filterAlerts('read')">
+                                            📋 已读
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="alert-filter-all" onclick="filterAlerts('all')">
+                                            📄 全部
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadAlerts()">
+                                        🔄 刷新
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="alerts-list"></div>
                 </div>
             </main>
             </div>
@@ -170,6 +199,10 @@
                         </div>
                         <div class="mb-2"><label class="form-label">价格</label><input class="form-control" id="product-price" type="number" step="0.01" required></div>
                         <div class="mb-2"><label class="form-label">库存</label><input class="form-control" id="product-stock" type="number" required></div>
+                        <div class="mb-2">
+                            <label class="form-label">预警阈值</label>
+                            <input class="form-control" id="product-threshold" type="number" min="0" value="10" required>
+                        </div>
                         <div class="mb-2">
                             <label class="form-label">图片</label>
                             <div class="d-flex gap-2 align-items-start">

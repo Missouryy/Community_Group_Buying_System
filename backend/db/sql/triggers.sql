@@ -35,8 +35,8 @@ AFTER UPDATE ON api_product
 FOR EACH ROW
 BEGIN
     IF NEW.stock_quantity < NEW.warning_threshold AND NEW.stock_quantity < OLD.stock_quantity THEN
-        INSERT INTO api_alert (product_id, message)
-        VALUES (NEW.id, CONCAT('商品 "', NEW.name, '" 库存不足 (', NEW.stock_quantity, '), 请及时补货!'));
+        INSERT INTO api_alert (product_id, message, is_read, created_at)
+        VALUES (NEW.id, CONCAT('商品 "', NEW.name, '" 库存不足 (', NEW.stock_quantity, '), 请及时补货!'), 0, NOW());
     END IF;
 END $$
 
