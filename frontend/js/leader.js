@@ -5,7 +5,25 @@
 
   function ensureAuth() {
     const { access } = window.api.getTokens();
-    if (!access) window.location.href = '/login.html';
+    if (!access) {
+      window.location.href = '/login.html';
+      return;
+    }
+    
+    // 验证用户角色是否为团长
+    try {
+      const payload = JSON.parse(atob(access.split('.')[1]));
+      const role = payload.role;
+      if (role !== 'leader') {
+        alert('您没有权限访问此页面');
+        window.location.href = '/index.html';
+        return;
+      }
+    } catch (e) {
+      console.error('Token解析失败:', e);
+      window.location.href = '/login.html';
+      return;
+    }
   }
 
   async function loadGroupBuys() {
@@ -543,11 +561,11 @@
       const detailsCard = document.createElement('div');
       detailsCard.className = 'card';
       detailsCard.innerHTML = `
-        <div class="card-body p-0">
+        <div class="card shadow-community">
           <div class="table-responsive">
             <table class="table table-borderless mb-0">
               <thead>
-                <tr class="bg-light">
+                <tr>
                   <th>日期</th>
                   <th>拼单</th>
                   <th>订单金额</th>

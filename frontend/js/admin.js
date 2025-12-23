@@ -5,7 +5,25 @@
 
   function ensureAuth() {
     const { access } = window.api.getTokens();
-    if (!access) window.location.href = '/login.html';
+    if (!access) {
+      window.location.href = '/login.html';
+      return;
+    }
+    
+    // 验证用户角色是否为管理员
+    try {
+      const payload = JSON.parse(atob(access.split('.')[1]));
+      const role = payload.role;
+      if (role !== 'admin') {
+        alert('您没有权限访问此页面');
+        window.location.href = '/index.html';
+        return;
+      }
+    } catch (e) {
+      console.error('Token解析失败:', e);
+      window.location.href = '/login.html';
+      return;
+    }
   }
   
   // 统一的状态标签映射

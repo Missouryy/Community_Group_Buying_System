@@ -106,8 +106,129 @@ body.login-bg .emoji-field .emoji {
 .ratio-16x9 { position: relative; width: 100%; padding-top: 56.25%; }
 .ratio-16x9 > img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 
-/* Hover lift for cards and buttons */
-.lift:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-.lift { transition: transform .2s ease, box-shadow .2s ease; }
+/* Google Material Design Hover Effects */
+.lift { 
+  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0.0, 0.2, 1); 
+}
+
+.lift:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 2px 4px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+}
+
+/* Card border radius - Google standard */
+.card {
+  border-radius: 8px !important;
+  border: none;
+}
+
+/* Button enhancements for Google style */
+.btn {
+  border-radius: 4px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background-color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.btn-primary:hover {
+  background-color: #1557b0;
+  border-color: #1557b0;
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+}
+
+.btn-outline-primary {
+  color: #1a73e8;
+  border-color: #dadce0;
+}
+
+.btn-outline-primary:hover {
+  background-color: rgba(26, 115, 232, 0.04);
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.btn-outline-secondary {
+  color: #5f6368;
+  border-color: #dadce0;
+}
+
+.btn-outline-secondary:hover {
+  background-color: rgba(95, 99, 104, 0.04);
+  border-color: #5f6368;
+  color: #202124;
+}
+
+/* Dark mode adaptations for Google style */
+[data-bs-theme="dark"] .btn-primary {
+  background-color: #8ab4f8;
+  border-color: #8ab4f8;
+  color: #202124;
+}
+
+[data-bs-theme="dark"] .btn-primary:hover {
+  background-color: #aecbfa;
+  border-color: #aecbfa;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  color: #8ab4f8;
+  border-color: #5f6368;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary:hover {
+  background-color: rgba(138, 180, 248, 0.08);
+  border-color: #8ab4f8;
+  color: #8ab4f8;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  color: #9aa0a6;
+  border-color: #5f6368;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+  background-color: rgba(154, 160, 166, 0.08);
+  border-color: #9aa0a6;
+  color: #e8eaed;
+}
+
+/* Dark mode card and shadow */
+[data-bs-theme="dark"] .card {
+  background-color: #292a2d;
+  border: 1px solid #3c4043;
+}
+
+[data-bs-theme="dark"] .shadow-community,
+[data-bs-theme="dark"] .shadow-deal {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-bs-theme="dark"] .lift:hover {
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Apple-style hero banner dark mode */
+[data-bs-theme="dark"] h1[style*="color: #1d1d1f"],
+[data-bs-theme="dark"] div[style*="color: #1d1d1f"] {
+  color: #f5f5f7 !important;
+}
+
+[data-bs-theme="dark"] .lead.text-muted {
+  color: #a1a1a6 !important;
+}
+
+[data-bs-theme="dark"] .small.text-muted {
+  color: #86868b !important;
+}
 
 

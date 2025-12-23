@@ -670,7 +670,7 @@ h1, h2, h3, h4, h5, h6 {
 /* 确保深色背景不被遮挡 */
 [data-bs-theme="dark"] body {
   background: transparent;
-  color: rgba(249, 249, 249, 0.92);
+  color: rgba(249, 249, 249, 0.95);
   min-height: 100vh;
 }
 
@@ -687,9 +687,9 @@ h1, h2, h3, h4, h5, h6 {
 [data-bs-theme="dark"] .dropdown-menu,
 [data-bs-theme="dark"] .offcanvas,
 [data-bs-theme="dark"] .list-group-item {
-  /* 提升透光度，微加玻璃感 */
-  background-color: rgba(28, 28, 30, 0.78);
-  border-color: rgba(255, 255, 255, 0.10);
+  /* 提升不透明度，增强与背景区分度 */
+  background-color: rgba(28, 28, 30, 0.88);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
@@ -701,30 +701,42 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-bs-theme="dark"] .card-body {
-  color: rgba(249, 249, 249, 0.85);
+  color: rgba(249, 249, 249, 0.92);
 }
 
 [data-bs-theme="dark"] .card-header {
-  background-color: rgba(44, 44, 46, 0.80);
-  border-bottom-color: rgba(255, 255, 255, 0.10);
+  background-color: rgba(44, 44, 46, 0.88);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .card-footer {
-  background-color: rgba(44, 44, 46, 0.80);
-  border-top-color: rgba(255, 255, 255, 0.10);
+  background-color: rgba(44, 44, 46, 0.88);
+  border-top-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .form-control,
 [data-bs-theme="dark"] .form-select,
 [data-bs-theme="dark"] .input-group .form-control {
-  background-color: rgba(44, 44, 46, 0.9);
-  color: rgba(249, 249, 249, 0.92);
-  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(44, 44, 46, 0.92);
+  color: rgba(249, 249, 249, 0.95);
+  border-color: rgba(255, 255, 255, 0.20);
 }
 [data-bs-theme="dark"] .form-control:focus,
 [data-bs-theme="dark"] .form-select:focus {
   border-color: rgba(10, 132, 255, 0.6);
   box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.18);
+}
+
+/* 深色模式下的 placeholder 文本 */
+[data-bs-theme="dark"] .form-control::placeholder,
+[data-bs-theme="dark"] .form-select::placeholder {
+  color: rgba(174, 174, 178, 0.75);
+  opacity: 1;
+}
+
+[data-bs-theme="dark"] .form-control:focus::placeholder,
+[data-bs-theme="dark"] .form-select:focus::placeholder {
+  color: rgba(174, 174, 178, 0.60);
 }
 
 [data-bs-theme="dark"] .nav-main {
@@ -775,29 +787,29 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-bs-theme="dark"] .sidebar-nav {
-  background: rgba(28, 28, 30, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(28, 28, 30, 0.92);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 [data-bs-theme="dark"] .sidebar-nav .nav-link { color: rgba(249, 249, 249, 0.85); }
 [data-bs-theme="dark"] .sidebar-nav .nav-link:hover { background: rgba(10, 132, 255, 0.18); color: rgba(10, 132, 255, 0.95); }
-[data-bs-theme="dark"] .sidebar-nav .nav-link.active { background: linear-gradient(135deg, rgba(10, 132, 255, 0.9) 0%, rgba(15, 123, 255, 0.95) 100%); }
+[data-bs-theme="dark"] .sidebar-nav .nav-link.active { background: linear-gradient(135deg, rgba(10, 132, 255, 0.9) 0%, rgba(15, 123, 255, 0.95) 100%); color: white !important; }
 
 [data-bs-theme="dark"] .page-tabs-container { background: rgba(28, 28, 30, 0.68); }
 [data-bs-theme="dark"] .page-tabs .nav-link { color: rgba(249, 249, 249, 0.75); }
 [data-bs-theme="dark"] .page-tabs .nav-link:hover { background: rgba(10, 132, 255, 0.18); color: rgba(10, 132, 255, 0.95); }
-[data-bs-theme="dark"] .page-tabs .nav-link.active { background: linear-gradient(135deg, rgba(10, 132, 255, 0.9) 0%, rgba(15, 123, 255, 0.95) 100%); color: white; }
+[data-bs-theme="dark"] .page-tabs .nav-link.active { background: linear-gradient(135deg, rgba(10, 132, 255, 0.9) 0%, rgba(15, 123, 255, 0.95) 100%); color: white !important; }
 
 [data-bs-theme="dark"] .dropdown-menu {
   background-color: rgba(28, 28, 30, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 [data-bs-theme="dark"] .dropdown-item { color: rgba(249, 249, 249, 0.9); }
 [data-bs-theme="dark"] .dropdown-item:hover,
 [data-bs-theme="dark"] .dropdown-item:focus { background-color: rgba(10, 132, 255, 0.18); border-color: rgba(10, 132, 255, 0.25); color: rgba(10, 132, 255, 0.95); }
 
 [data-bs-theme="dark"] .table {
-  color: rgba(249, 249, 249, 0.85);
-  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(249, 249, 249, 0.92);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .table tbody tr {
@@ -817,8 +829,21 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-bs-theme="dark"] .table td,
 [data-bs-theme="dark"] .table th {
-  border-color: rgba(255, 255, 255, 0.06);
-  color: rgba(249, 249, 249, 0.85);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(249, 249, 249, 0.92);
+}
+
+/* 深色模式下把黑色文字(#1d1d1f)改为白色 */
+[data-bs-theme="dark"] .table [style*="color: #1d1d1f"],
+[data-bs-theme="dark"] .table [style*="color:#1d1d1f"],
+[data-bs-theme="dark"] .table [style*="color: rgb(29, 29, 31)"] {
+  color: rgba(249, 249, 249, 0.92) !important;
+}
+
+/* 深色模式下把没有颜色样式的普通文字改为白色 */
+[data-bs-theme="dark"] .table td span.fw-semibold:not([style*="color"]),
+[data-bs-theme="dark"] .table td div.fw-semibold:not([style*="color"]) {
+  color: rgba(249, 249, 249, 0.92) !important;
 }
 
 [data-bs-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
@@ -826,7 +851,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-bs-theme="dark"] .table-bordered {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* 登录页背景在深色模式下的适配 */
@@ -978,7 +1003,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* 深色模式下的文本颜色 */
 [data-bs-theme="dark"] .text-muted {
-  color: rgba(174, 174, 178, 0.85) !important;
+  color: rgba(199, 199, 203, 0.90) !important;
 }
 
 [data-bs-theme="dark"] .text-success {
@@ -1026,7 +1051,7 @@ h1, h2, h3, h4, h5, h6 {
 /* 深色模式下的小文本 */
 [data-bs-theme="dark"] small,
 [data-bs-theme="dark"] .small {
-  color: rgba(174, 174, 178, 0.85);
+  color: rgba(199, 199, 203, 0.90);
 }
 
 /* 深色模式下的边框 */
@@ -1035,24 +1060,24 @@ h1, h2, h3, h4, h5, h6 {
 [data-bs-theme="dark"] .border-bottom,
 [data-bs-theme="dark"] .border-start,
 [data-bs-theme="dark"] .border-end {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 /* 深色模式下的分隔线 */
 [data-bs-theme="dark"] hr {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
   opacity: 1;
 }
 
 /* 深色模式下的模态框头部和底部 */
 [data-bs-theme="dark"] .modal-header {
   background-color: rgba(44, 44, 46, 0.95);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .modal-footer {
   background-color: rgba(44, 44, 46, 0.95);
-  border-top-color: rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .modal-title {
@@ -1070,9 +1095,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* 深色模式下的分页 */
 [data-bs-theme="dark"] .pagination-main .page-link {
-  background-color: rgba(44, 44, 46, 0.9);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(249, 249, 249, 0.85);
+  background-color: rgba(44, 44, 46, 0.92);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(249, 249, 249, 0.92);
 }
 
 [data-bs-theme="dark"] .pagination-main .page-link:hover:not(.disabled) {
@@ -1104,15 +1129,15 @@ h1, h2, h3, h4, h5, h6 {
 
 /* 深色模式下的输入组 */
 [data-bs-theme="dark"] .input-group-text {
-  background-color: rgba(44, 44, 46, 0.9);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(249, 249, 249, 0.85);
+  background-color: rgba(44, 44, 46, 0.92);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: rgba(249, 249, 249, 0.92);
 }
 
 /* 深色模式下的列表组 */
 [data-bs-theme="dark"] .list-group-item {
   background-color: rgba(28, 28, 30, 0.92);
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
   color: rgba(249, 249, 249, 0.92);
 }
 
@@ -1247,13 +1272,13 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
-/* Enhanced Shadows for Depth */
+/* Google Material Design Shadows */
 .shadow-community {
-  box-shadow: 0 8px 32px rgba(52, 199, 89, 0.12) !important;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15) !important;
 }
 
 .shadow-deal {
-  box-shadow: 0 8px 32px rgba(255, 149, 0, 0.15) !important;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15) !important;
 }
 
 /* WebSocket实时更新动画 */
@@ -1381,14 +1406,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-brand-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.18), rgba(0, 122, 255, 0.18));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 1.15rem;
+  margin-right: 0.25rem;
 }
 
 .nav-toggler {
@@ -1621,7 +1643,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ------------------------------------------------------ */
-/* 页面内标签导航 - Apple 风格                             */
+/* 页面内标签导航                             */
 /* ------------------------------------------------------ */
 
 .page-tabs-container {
