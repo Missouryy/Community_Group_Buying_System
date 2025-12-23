@@ -1,37 +1,37 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .admin_views import (
+from .views.admin import (
     AdminProductViewSet, LeaderApplicationsListView, LeaderApplicationDetailView,
     AdminAlertListView, AdminAlertMarkReadView, AdminStatsView, AdminSalesDailyView,
     AdminOrderListView, AdminOrderDetailView, AdminOrderUpdateStatusView,
     AdminOrderBatchUpdateView, AdminOrderCancelView
 )
-from .leader_views import LeaderGroupBuyListCreateView, LeaderGroupBuyOrdersView, LeaderConfirmPickupView, LeaderStartGroupBuyView
-from .user_views import (
+from .views.leader import LeaderGroupBuyListCreateView, LeaderGroupBuyOrdersView, LeaderConfirmPickupView, LeaderStartGroupBuyView
+from .views.user import (
     JoinGroupBuyView, GroupBuyPublicListView, MyOrdersView, MyOrderDetailView,
     MeView, OrderConfirmView, OrderReviewView, ProductReviewsListView,
     MembershipTierListView, ProductPublicListView
 )
 # 新增的增强视图
-from .stats_views import (
+from .views.stats import (
     PublicStatsView, SuccessfulGroupBuysView, FeaturedLeadersView, RecommendationsView
 )
-from .leader_extras import (
+from .views.leader_extras import (
     LeaderStatsView, LeaderPickupsView, LeaderCommissionsSummaryView, LeaderCommissionsView, LeaderDemoteToUserView
 )
-from .admin_extras import (
+from .views.admin_extras import (
     AdminLeaderApproveView, AdminLeaderRejectView, AdminLeaderDetailsView, AdminLeaderDeactivateView
 )
-from .user_extras import (
+from .views.user_extras import (
     UserApplyLeaderView, ProductNotifyView, MeDetailView
 )
-from .image_upload_views import (
+from .views.image_upload import (
     ImageUploadView, ProductImageUploadView
 )
-from .payment_views import (
+from .views.payment import (
     WeChatPayView, WeChatPayNotifyView, AlipayView, PaymentStatusView
 )
-from .analytics_views import (
+from .views.analytics import (
     UserBehaviorTrackingView, AdminAnalyticsView, DailyStatsView
 )
 
