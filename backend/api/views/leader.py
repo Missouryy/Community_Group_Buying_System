@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils import timezone
-from api.models import GroupBuy, Order, OrderItem, Product
+from api.models import GroupBuy, Order, OrderItem, Product, MembershipTier
 from api.serializers import GroupBuySerializer, OrderSerializer
 from api.permissions import IsLeaderRole
 
@@ -77,11 +77,34 @@ class LeaderConfirmPickupView(APIView):
         except Order.DoesNotExist:
             return Response({'error': '订单不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-        if order.status != 'successful':
-            return Response({'error': '订单状态不是“已成团”，无法确认提货'}, status=status.HTTP_400_BAD_REQUEST)
+        if order.status not in ['successful', 'ready_for_pickup', 'pending_payment']:
+            return Response({'error': '订单状态不正确，无法确认提货'}, status=status.HTTP_400_BAD_REQUEST)
 
-        order.status = 'ready_for_pickup'
-        order.save()
+        # 只有successful或ready_for_pickup状态才需要更新
+        if order.status in ['successful', 'ready_for_pickup']:
+            if getattr(order, 'payment_status', '') == 'paid':
+                # 如果已支付，直接完成订单并结算积分
+                order.status = 'completed'
+                order.save()
+                
+                # 增加积分并升级会员
+                user = order.user
+                user.loyalty_points = (user.loyalty_points or 0) + int(order.total_price)
+                
+                # 自动匹配最高可达会员等级
+                candidates = MembershipTier.objects.all().order_by('points_required')
+                new_tier = None
+                for t in candidates:
+                    if user.loyalty_points >= t.points_required:
+                        new_tier = t
+                if new_tier:
+                    user.membership_tier = new_tier
+                user.save()
+            else:
+                # 未支付则转为待支付
+                order.status = 'pending_payment'
+                order.save()
+        
         return Response({'ok': True})
 
 

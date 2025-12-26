@@ -9,12 +9,25 @@
     <!-- 关键CSS：防止emoji闪烁 -->
     <style>
         body,*{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",sans-serif!important}
+        
+        /* Particle Canvas Background */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
     </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/theme.css" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
 </head>
 <body>
+    <!-- Particle Canvas Background -->
+    <canvas id="particles-canvas"></canvas>
     <!-- 导航将由 nav.js 动态生成 -->
 
     <main class="container py-5">
@@ -22,10 +35,10 @@
         <div class="row mb-5">
             <div class="col-12">
                 <div class="text-center" style="padding: 4rem 0 3rem 0;">
-                    <h1 class="display-3 fw-semibold mb-3" style="font-size: 3.5rem; letter-spacing: -0.02em; color: #1d1d1f;">
+                    <h1 class="display-3 fw-semibold mb-3" style="font-size: 5rem; letter-spacing: -0.02em; color: #1d1d1f;">
                         社 区 团 购 系 统
                     </h1>
-                    <p class="lead text-muted mb-5" style="font-size: 1.25rem; font-weight: 400; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <p class="lead text-muted mb-5" style="font-size: 1.5rem; font-weight: 400; max-width: 600px; margin-left: auto; margin-right: auto;">
                         邻 里 共 享 ， 新 鲜 到 家
                     </p>
                     
@@ -56,19 +69,46 @@
         <!-- 快捷入口 -->
         <div class="row mb-5">
             <div class="col-12">
-                <div class="d-flex gap-3 flex-wrap">
-                    <button class="btn btn-outline-secondary" onclick="filterGroupBuys('all')">
-                        📋 全部拼单
-                    </button>
-                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('fresh')">
-                        🥬 生鲜果蔬
-                    </button>
-                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('meat')">
-                        🥩 肉禽蛋类
-                    </button>
-                    <button class="btn btn-outline-primary" onclick="filterGroupBuys('daily')">
-                        🧴 日用百货
-                    </button>
+                <div class="d-flex gap-3 flex-wrap align-items-center justify-content-between">
+                    <div class="d-flex gap-3 flex-wrap">
+                        <button class="btn btn-outline-secondary" onclick="filterGroupBuys('all')">
+                            📋 全部拼单
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="filterGroupBuys('fresh')">
+                            🥬 生鲜果蔬
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="filterGroupBuys('meat')">
+                            🥩 肉禽蛋类
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="filterGroupBuys('daily')">
+                            🧴 日用百货
+                        </button>
+                    </div>
+                    
+                    <!-- 搜索框 -->
+                    <div class="d-flex align-items-center gap-2" style="min-width: 300px;">
+                        <div class="input-group form-control d-flex align-items-center p-0 overflow-hidden">
+                            <span class="input-group-text border-0 bg-transparent pe-0">
+                                🔍
+                            </span>
+                            <input 
+                                type="text" 
+                                class="form-control border-0 shadow-none bg-transparent ps-2 pe-2" 
+                                id="search-input" 
+                                placeholder="搜索商品名称..."
+                                oninput="searchGroupBuys(this.value)"
+                            >
+                            <button 
+                                class="btn border-0 bg-transparent ps-0 pe-2 text-muted" 
+                                type="button"
+                                id="clear-search"
+                                onclick="clearSearch()"
+                                style="display: none;"
+                            >
+                            ✖️
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,7 +173,7 @@
                         </button>
                         <div class="dropdown">
                             <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                支付方式
+                                参团并支付
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="#" data-payment="wechat">💬 微信支付</a></li>
@@ -153,6 +193,131 @@
     <script src="/js/websocket.js"></script>
     <script src="/js/user.js"></script>
     <script>
+        // ========== Particle Effect ==========
+        (function() {
+            const canvas = document.getElementById('particles-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animationId;
+            
+            // Set canvas size
+            function setCanvasSize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            setCanvasSize();
+            window.addEventListener('resize', () => {
+                setCanvasSize();
+                initParticles();
+            });
+            
+            // Particle class
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+                
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2.5 + 1; // Larger particles (1-3.5px)
+                    this.speedX = Math.random() * 0.4 - 0.2;
+                    this.speedY = Math.random() * 0.4 - 0.2;
+                    this.opacity = Math.random() * 0.4 + 0.3; // More visible (0.3-0.7)
+                }
+                
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    
+                    // Wrap around screen
+                    if (this.x > canvas.width) this.x = 0;
+                    if (this.x < 0) this.x = canvas.width;
+                    if (this.y > canvas.height) this.y = 0;
+                    if (this.y < 0) this.y = canvas.height;
+                }
+                
+                draw() {
+                    // Check if dark mode is enabled (System preference or data-bs-theme attribute)
+                    const isSystemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const isAppDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                    const isDarkMode = isAppDark || (isSystemDark && !document.documentElement.getAttribute('data-bs-theme'));
+                    
+                    const particleColor = isDarkMode ? '95, 99, 104' : '189, 193, 198'; // Lighter gray for dark mode
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${particleColor}, ${this.opacity})`;
+                    ctx.fill();
+                }
+            }
+            
+            // Initialize particles - more particles
+            function initParticles() {
+                particles = [];
+                const particleCount = Math.floor((canvas.width * canvas.height) / 18000); // More dense
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+            }
+            
+            // Draw connections - more visible
+            function drawConnections() {
+                // Check if dark mode is enabled
+                const isSystemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isAppDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                const isDarkMode = isAppDark || (isSystemDark && !document.documentElement.getAttribute('data-bs-theme'));
+                
+                const connectionColor = isDarkMode ? '95, 99, 104' : '189, 193, 198'; // Lighter gray for dark mode
+                
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 120) { // Longer connection distance
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(${connectionColor}, ${0.15 * (1 - distance / 120)})`; // More visible
+                            ctx.lineWidth = 0.8;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+            
+            // Animation loop
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                particles.forEach(particle => {
+                    particle.update();
+                    particle.draw();
+                });
+                
+                drawConnections();
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            initParticles();
+            animate();
+
+            // Listen for theme changes observer
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
+                        // Trigger redraw implicitly on next frame
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
+
+        })();
+
       // 首页特定逻辑
       document.addEventListener('DOMContentLoaded', () => {
         // 连接WebSocket状态到导航系统
@@ -162,6 +327,56 @@
             window.navSystem.setWebSocketStatus(status, status === 'connected' ? '实时连接' : '连接断开');
           };
         }
+        
+        // 处理支付方式下拉菜单点击
+        document.addEventListener('click', async (e) => {
+          const paymentLink = e.target.closest('.dropdown-menu a[data-payment]');
+          if (paymentLink) {
+            e.preventDefault();
+            const paymentMethod = paymentLink.getAttribute('data-payment');
+            
+            // 先检查是否已填写数量和选择了拼单
+            const joinId = document.getElementById('join-id')?.value;
+            const quantity = document.getElementById('join-qty')?.value;
+            
+            if (!joinId || !quantity) {
+              alert('请先选择拼单数量');
+              return;
+            }
+            
+            try {
+              // 1. 创建订单
+              const res = await window.api.fetchAPI(`/api/group-buys/${joinId}/join/`, { 
+                method: 'POST', 
+                body: { quantity: parseInt(quantity) } 
+              });
+              
+              if (res.ok) {
+                const data = await res.json();
+                
+                // 关闭参团模态框
+                const joinModal = document.getElementById('joinModal');
+                if (joinModal) {
+                  const modalInstance = bootstrap.Modal.getInstance(joinModal);
+                  if (modalInstance) modalInstance.hide();
+                }
+                
+                // 2. 立即发起支付
+                if (data.order_id && window.payment) {
+                  await window.payment.initiatePayment(data.order_id, paymentMethod);
+                } else {
+                  alert('订单创建成功，但无法发起支付');
+                }
+              } else {
+                const errorData = await res.json().catch(() => ({}));
+                alert(errorData.error || '参团失败，请重试');
+              }
+            } catch (error) {
+              console.error('支付流程错误:', error);
+              alert('支付失败: ' + error.message);
+            }
+          }
+        });
       });
     </script>
 </body>

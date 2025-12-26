@@ -10,7 +10,7 @@ import random
 import string
 import json
 import requests
-from api.models import Order, GroupBuy
+from api.models import Order, GroupBuy, MembershipTier
 from api.websocket_utils import send_order_update
 
 
@@ -70,7 +70,7 @@ class WeChatPayView(APIView):
             'spbill_create_ip': '127.0.0.1',
             'notify_url': notify_url,
             'trade_type': 'JSAPI',
-            'openid': getattr(request.user, 'wechat_openid', 'demo_openid')
+            'openid': f'demo_openid_{order.user.id}'  # 模拟openid
         }
         
         # 生成签名
@@ -234,3 +234,178 @@ class PaymentStatusView(APIView):
             return Response({'error': '订单不存在'}, status=404)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+
+class AlipayNotifyView(APIView):
+    """支付宝支付回调接口（模拟）"""
+    
+    def post(self, request):
+        try:
+            # 模拟处理支付宝回调
+            out_trade_no = request.data.get('out_trade_no', '')
+            trade_status = request.data.get('trade_status', 'TRADE_SUCCESS')
+            
+            if trade_status == 'TRADE_SUCCESS' and out_trade_no:
+                # 提取订单ID
+                if out_trade_no.startswith('alipay_order_'):
+                    parts = out_trade_no.split('_')
+                    if len(parts) >= 3:
+                        order_id = parts[2]
+                        
+                        try:
+                            order = Order.objects.get(id=order_id)
+                            
+                            # 更新订单支付状态
+                            order.payment_status = 'paid'
+                            order.payment_time = timezone.now()
+                            order.payment_method = 'alipay'
+                            order.save()
+                            
+                            # 发送支付成功通知
+                            send_order_update(
+                                order.user.id,
+                                order.id,
+                                'payment_success',
+                                {'message': '支付宝支付成功，等待拼单结果'}
+                            )
+                            
+                            # 检查拼单是否成功
+                            self.check_groupbuy_success(order.group_buy)
+                            
+                        except Order.DoesNotExist:
+                            pass
+            
+            # 返回支付宝要求的响应格式
+            return Response('success', content_type='text/plain')
+            
+        except Exception as e:
+            return Response('fail', content_type='text/plain')
+    
+    def check_groupbuy_success(self, group_buy):
+        """检查拼单是否达成目标"""
+        paid_orders_count = Order.objects.filter(
+            group_buy=group_buy,
+            payment_status='paid'
+        ).count()
+        
+        if paid_orders_count >= group_buy.target_participants:
+            # 拼单成功，更新状态
+            group_buy.status = 'successful'
+            group_buy.save()
+            
+            # 更新所有相关订单状态
+            orders = Order.objects.filter(group_buy=group_buy, payment_status='paid')
+            for order in orders:
+                order.status = 'successful'
+                order.save()
+                
+                # 发送拼单成功通知
+                send_order_update(
+                    order.user.id,
+                    order.id,
+                    'groupbuy_success',
+                    {'message': '拼单成功！等待团长安排提货'}
+                )
+
+
+class MockPaymentSuccessView(APIView):
+    """模拟支付成功接口（仅用于演示测试）"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """
+        模拟支付成功，直接更新订单状态
+        用于演示和测试，无需真实支付流程
+        """
+        try:
+            order_id = request.data.get('order_id')
+            payment_method = request.data.get('payment_method', 'alipay')  # 默认支付宝
+            
+            if not order_id:
+                return Response({'error': '缺少订单ID'}, status=400)
+            
+            # 获取订单信息
+            try:
+                order = Order.objects.get(id=order_id, user=request.user)
+            except Order.DoesNotExist:
+                return Response({'error': '订单不存在'}, status=404)
+            
+            if order.payment_status == 'paid':
+                return Response({'error': '订单已支付'}, status=400)
+            
+            # 模拟支付成功，更新订单状态
+            order.payment_status = 'paid'
+            order.payment_time = timezone.now()
+            order.payment_method = payment_method
+            order.save()
+
+            # 如果订单已经是待支付状态（说明已收货），则直接完成订单
+            if order.status == 'pending_payment':
+                order.status = 'completed'
+                order.save()
+                
+                # 增加积分
+                user = order.user
+                user.loyalty_points = (user.loyalty_points or 0) + int(order.total_price)
+                # 升级会员
+                candidates = MembershipTier.objects.all().order_by('points_required')
+                new_tier = None
+                for t in candidates:
+                    if user.loyalty_points >= t.points_required:
+                        new_tier = t
+                if new_tier:
+                    user.membership_tier = new_tier
+                user.save()
+            
+            # 发送支付成功通知
+            send_order_update(
+                order.user.id,
+                order.id,
+                'payment_success',
+                {'message': f'模拟{payment_method}支付成功，等待拼单结果'}
+            )
+            
+            # 检查拼单是否达成目标
+            paid_orders_count = Order.objects.filter(
+                group_buy=order.group_buy,
+                payment_status='paid'
+            ).count()
+            
+            groupbuy_success = False
+            if paid_orders_count >= order.group_buy.target_participants:
+                # 拼单成功，更新状态
+                order.group_buy.status = 'successful'
+                order.group_buy.save()
+                groupbuy_success = True
+                
+                # 更新所有相关订单状态
+                orders = Order.objects.filter(
+                    group_buy=order.group_buy, 
+                    payment_status='paid',
+                    status='awaiting_group_success'
+                )
+                for o in orders:
+                    o.status = 'successful'
+                    o.save()
+                    
+                    # 发送拼单成功通知
+                    send_order_update(
+                        o.user.id,
+                        o.id,
+                        'groupbuy_success',
+                        {'message': '拼单成功！等待团长安排提货'}
+                    )
+            
+            return Response({
+                'success': True,
+                'message': '模拟支付成功',
+                'order_id': order.id,
+                'payment_status': order.payment_status,
+                'payment_time': order.payment_time.isoformat(),
+                'groupbuy_success': groupbuy_success,
+                'groupbuy_participants': f'{paid_orders_count}/{order.group_buy.target_participants}'
+            })
+            
+        except Exception as e:
+            return Response({'error': f'模拟支付失败: {str(e)}'}, status=500)
+

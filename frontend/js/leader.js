@@ -34,17 +34,46 @@
     container.innerHTML = '';
     data.forEach(g => {
       const progress = Math.min(100, Math.round((g.current_participants / Math.max(1, g.target_participants)) * 100));
+      const statusMap = {
+        'pending': { text: '待开始', class: 'secondary' },
+        'active': { text: '进行中', class: 'success' },
+        'successful': { text: '已成团', class: 'primary' },
+        'failed': { text: '已失败', class: 'danger' },
+        'canceled': { text: '已取消', class: 'warning' }
+      };
+      const statusInfo = statusMap[g.status] || { text: g.status, class: 'secondary' };
+      
       const card = document.createElement('div');
       card.className = 'col-12 col-md-6 col-lg-4';
       card.innerHTML = `
-        <div class="card h-100">
+        <div class="card h-100 lift shadow-community">
           <div class="card-body">
-            <h5 class="card-title">${g.product}</h5>
-            <p class="card-text">目标：${g.target_participants}，当前：${g.current_participants}</p>
-            <div class="progress"><div class="progress-bar" style="width:${progress}%">${progress}%</div></div>
-            <div class="mt-3 d-flex gap-2">
-              ${g.status === 'pending' ? `<button class="btn btn-success btn-sm" data-start-gb="${g.id}">立即开始</button>` : ''}
-              <button class="btn btn-outline-primary btn-sm" data-view-orders="${g.id}">查看订单</button>
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <h6 class="card-title mb-0">${g.product_name || g.product}</h6>
+              <span class="badge text-bg-${statusInfo.class}">${statusInfo.text}</span>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="text-muted small">目标人数</div>
+                <div class="fw-semibold">${g.target_participants} 人</div>
+              </div>
+              <div class="col-6">
+                <div class="text-muted small">当前人数</div>
+                <div class="fw-semibold text-primary">${g.current_participants} 人</div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small text-muted">完成度</span>
+                <span class="small fw-semibold">${progress}%</span>
+              </div>
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-primary" style="width:${progress}%"></div>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              ${g.status === 'pending' ? `<button class="btn btn-success btn-sm flex-fill" data-start-gb="${g.id}">立即开始</button>` : ''}
+              <button class="btn btn-outline-primary btn-sm flex-fill" data-view-orders="${g.id}">查看订单</button>
             </div>
           </div>
         </div>`;
@@ -409,19 +438,6 @@
           }
         }
       }
-      
-      // 联系用户按钮
-      const contactBtn = e.target.closest('button[data-contact-user]');
-      if (contactBtn) {
-        const contact = contactBtn.getAttribute('data-contact-user');
-        if (contact.includes('@')) {
-          window.location.href = `mailto:${contact}`;
-        } else if (contact.match(/^\d+$/)) {
-          window.location.href = `tel:${contact}`;
-        } else {
-          alert(`联系方式：${contact}`);
-        }
-      }
     });
   }
 
@@ -445,8 +461,22 @@
     }
     
     pickups.forEach(pickup => {
-      const statusClass = pickup.status === 'ready_for_pickup' ? 'success' : pickup.status === 'picked_up' ? 'primary' : 'warning';
-      const statusText = pickup.status === 'ready_for_pickup' ? '待提货' : pickup.status === 'picked_up' ? '已提货' : '处理中';
+      const statusClass = pickup.status === 'ready_for_pickup' ? 'success' : pickup.status === 'pending_payment' ? 'warning' : pickup.status === 'completed' ? 'primary' : pickup.status === 'successful' ? 'info' : 'secondary';
+      const statusText = pickup.status === 'ready_for_pickup' ? '待提货' : pickup.status === 'pending_payment' ? '待支付' : pickup.status === 'completed' ? '已完成' : pickup.status === 'successful' ? '已成团' : '处理中';
+      
+      // 格式化提货时间
+      let formattedPickupTime = '';
+      if (pickup.pickup_time) {
+        const date = new Date(pickup.pickup_time);
+        formattedPickupTime = date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
       
       const card = document.createElement('div');
       card.className = 'card lift shadow-community mb-3';
@@ -479,16 +509,16 @@
           ` : ''}
           
           <div class="d-flex gap-2">
-            ${pickup.status === 'ready_for_pickup' ? `
+            ${pickup.status === 'successful' || pickup.status === 'ready_for_pickup' ? `
               <button class="btn btn-primary btn-sm" data-confirm-pickup="${pickup.order_id}">
                 <i class="bi bi-check-circle me-1"></i>确认提货
               </button>
-              <button class="btn btn-outline-secondary btn-sm" data-contact-user="${pickup.user_phone || pickup.user_id}">
-                <i class="bi bi-telephone me-1"></i>联系用户
-              </button>
             ` : ''}
-            ${pickup.status === 'picked_up' ? `
-              <small class="text-success">✅ 已于 ${pickup.pickup_time} 完成提货</small>
+            ${pickup.status === 'pending_payment' ? `
+              <small class="text-warning">⏳ 等待用户支付</small>
+            ` : ''}
+            ${pickup.status === 'completed' ? `
+              <small class="text-success">✅ 已于 ${formattedPickupTime} 完成提货</small>
             ` : ''}
           </div>
         </div>`;
@@ -531,14 +561,14 @@
             </div>
             <div class="col-6 col-md-3">
               <div class="text-center">
-                <div class="fs-4 fw-bold text-warning">¥${summary.pending_earnings || 0}</div>
-                <div class="text-muted small">待结算</div>
+                <div class="fs-4 fw-bold text-info">¥${summary.monthly_sales || 0}</div>
+                <div class="text-muted small">本月流水</div>
               </div>
             </div>
             <div class="col-6 col-md-3">
               <div class="text-center">
-                <div class="fs-4 fw-bold">${summary.commission_rate || 10}%</div>
-                <div class="text-muted small">提成比例</div>
+                <div class="fs-4 fw-bold text-dark">${summary.monthly_orders || 0}</div>
+                <div class="text-muted small">本月订单数</div>
               </div>
             </div>
           </div>

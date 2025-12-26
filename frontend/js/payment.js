@@ -82,9 +82,9 @@ window.payment = (function() {
                     }
                 });
             } else {
-                // 网页支付，显示支付链接
-                showPaymentLink(payParams, orderId, 'alipay');
-                resolve({ success: true, method: 'web_redirect' });
+                // 网页支付，显示二维码
+                showPaymentQRCode(payParams, orderId, 'alipay');
+                resolve({ success: true, method: 'qr_code' });
             }
         });
     }
@@ -95,6 +95,10 @@ window.payment = (function() {
     function showPaymentQRCode(payParams, orderId, method) {
         const modal = document.createElement('div');
         modal.className = 'modal fade';
+        
+        // 根据支付方式选择二维码图片
+        const qrCodeImage = method === 'wechat' ? 'wechatPayQRCode.JPG' : 'alipayQRCode.JPG';
+        
         modal.innerHTML = `
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -105,13 +109,9 @@ window.payment = (function() {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-center">
-                        <div class="border rounded-3 p-3 mb-3">
-                            <div class="fw-semibold">请使用${method === 'wechat' ? '微信' : '支付宝'}扫码支付</div>
-                        </div>
-                        
                         <div class="d-flex justify-content-center mb-3">
-                            <div id="qr-code-container" style="width: 200px; height: 200px; background: #f5f5f5; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <div class="text-muted">生成二维码中...</div>
+                            <div id="qr-code-container" style="width: 250px; height: 250px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="${qrCodeImage}" alt="${method === 'wechat' ? '微信' : '支付宝'}支付二维码" style="width: 100%; height: 100%; object-fit: contain;">
                             </div>
                         </div>
                         
@@ -119,12 +119,9 @@ window.payment = (function() {
                             订单号：${orderId}
                         </div>
                         
-                        <div class="d-flex gap-2 justify-content-center">
-                            <button class="btn btn-outline-primary" onclick="checkPaymentStatus(${orderId})">
-                                🔄 检查支付状态
-                            </button>
-                            <button class="btn btn-secondary" data-bs-dismiss="modal">
-                                取消支付
+                        <div class="d-flex justify-content-center">
+                            <button class="btn btn-primary px-4" id="payment-confirm-btn-${orderId}">
+                                我已完成付款
                             </button>
                         </div>
                     </div>
@@ -135,78 +132,46 @@ window.payment = (function() {
         const bsModal = new bootstrap.Modal(modal);
         bsModal.show();
         
-        // 生成二维码（这里使用模拟数据）
-        setTimeout(() => {
-            const qrContainer = document.getElementById('qr-code-container');
-            qrContainer.innerHTML = `
-                <div class="border" style="width: 180px; height: 180px; background: white; display: flex; align-items: center; justify-content: center; font-size: 12px; text-align: center;">
-                    ${method === 'wechat' ? '微信支付' : '支付宝'}<br>
-                    二维码<br>
-                    (演示版本)
-                </div>`;
-        }, 1000);
+        // 绑定"我已完成付款"按钮点击事件
+        const confirmBtn = document.getElementById(`payment-confirm-btn-${orderId}`);
+        confirmBtn.addEventListener('click', async () => {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>正在确认...';
+            
+            try {
+                // 调用模拟支付成功接口，直接修改支付状态
+                const res = await window.api.fetchAPI('/api/payment/mock-success/', {
+                    method: 'POST',
+                    body: { 
+                        order_id: orderId,
+                        payment_method: method  // 传递支付方式
+                    }
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.success) {
+                        bsModal.hide();
+                        showPaymentSuccess(orderId);
+                    } else {
+                        throw new Error(result.error || '支付确认失败');
+                    }
+                } else {
+                    const error = await res.json();
+                    throw new Error(error.error || '支付确认失败');
+                }
+            } catch (error) {
+                console.error('支付确认失败:', error);
+                alert(`支付确认失败: ${error.message}`);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '我已完成付款';
+            }
+        });
         
         modal.addEventListener('hidden.bs.modal', () => modal.remove());
-        
-        // 定时检查支付状态
-        const statusChecker = setInterval(() => {
-            checkPaymentStatus(orderId).then(status => {
-                if (status.payment_status === 'paid') {
-                    clearInterval(statusChecker);
-                    bsModal.hide();
-                    showPaymentSuccess(orderId);
-                }
-            }).catch(() => {
-                // 忽略检查错误
-            });
-        }, 3000);
-        
-        // 模态框关闭时停止检查
-        modal.addEventListener('hidden.bs.modal', () => {
-            clearInterval(statusChecker);
-        });
     }
     
-    /**
-     * 显示支付链接
-     */
-    function showPaymentLink(payParams, orderId, method) {
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">💰 支付宝支付</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <div class="border rounded-3 p-3 mb-3">
-                            <div class="fw-semibold">请点击下方按钮前往支付宝完成支付</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="text-muted small">订单号：${orderId}</div>
-                            <div class="fw-bold">支付金额：${payParams.amount}元</div>
-                        </div>
-                        
-                        <div class="d-flex gap-2 justify-content-center">
-                            <button class="btn btn-primary" onclick="window.open('#', '_blank')">
-                                前往支付宝支付
-                            </button>
-                            <button class="btn btn-outline-primary" onclick="checkPaymentStatus(${orderId})">
-                                我已完成支付
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        
-        document.body.appendChild(modal);
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-        modal.addEventListener('hidden.bs.modal', () => modal.remove());
-    }
+
     
     /**
      * 检查支付状态
@@ -242,7 +207,6 @@ window.payment = (function() {
                         
                         <div class="border rounded-3 p-3 mb-3">
                             <div class="mb-1">订单 #${orderId} 支付完成</div>
-                            <div class="text-muted small">等待拼单达成目标人数</div>
                         </div>
                         
                         <div class="d-flex gap-2 justify-content-center">

@@ -29,7 +29,8 @@ from .views.image_upload import (
     ImageUploadView, ProductImageUploadView
 )
 from .views.payment import (
-    WeChatPayView, WeChatPayNotifyView, AlipayView, PaymentStatusView
+    WeChatPayView, WeChatPayNotifyView, AlipayView, AlipayNotifyView, 
+    PaymentStatusView, MockPaymentSuccessView
 )
 from .views.analytics import (
     UserBehaviorTrackingView, AdminAnalyticsView, DailyStatsView
@@ -102,7 +103,9 @@ urlpatterns = [
     path('payment/wechat/', WeChatPayView.as_view(), name='wechat-pay'),
     path('payment/wechat/notify/', WeChatPayNotifyView.as_view(), name='wechat-pay-notify'),
     path('payment/alipay/', AlipayView.as_view(), name='alipay'),
+    path('payment/alipay/notify/', AlipayNotifyView.as_view(), name='alipay-notify'),
     path('payment/status/<int:order_id>/', PaymentStatusView.as_view(), name='payment-status'),
+    path('payment/mock-success/', MockPaymentSuccessView.as_view(), name='mock-payment-success'),
     
     # 数据分析API
     path('analytics/behavior/', UserBehaviorTrackingView.as_view(), name='user-behavior-tracking'),

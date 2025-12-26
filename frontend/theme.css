@@ -121,24 +121,24 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 14px;
 }
 
-/* Primary 按钮 - 绿色渐变（社区主色） */
+/* Primary 按钮 - 纯色蓝色（标准Bootstrap颜色） */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-green) 0%, var(--success-green) 100%);
+  background: var(--primary-blue);
   border: none;
   color: white;
-  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
 }
 
 .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
-  background: linear-gradient(135deg, #2fb653 0%, #28c04d 100%);
+  background: #0066cc;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(52, 199, 89, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 122, 255, 0.35);
   color: white;
 }
 
 .btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
 }
 
 /* Secondary 按钮 - 中性灰色 */
@@ -235,17 +235,17 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-outline-primary {
   background-color: transparent;
-  border: 1.5px solid var(--primary-green);
-  color: var(--primary-green);
+  border: 1.5px solid var(--primary-blue);
+  color: var(--primary-blue);
   box-shadow: none;
 }
 
 .btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
-  background-color: var(--primary-green);
-  border-color: var(--primary-green);
+  background-color: var(--primary-blue);
+  border-color: var(--primary-blue);
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
 }
 
 .btn-outline-secondary {

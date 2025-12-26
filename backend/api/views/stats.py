@@ -165,12 +165,16 @@ class RecommendationsView(APIView):
             results = []
             price_multiplier = Decimal('1.2')
             for product in recommended_products:
+                image_url = None
+                if product.image:
+                    image_url = request.build_absolute_uri(product.image.url)
+                    
                 results.append({
                     'id': product.id,
                     'name': product.name,
                     'price': str(product.price),
                     'original_price': str(product.price * price_multiplier),  # 估算原价
-                    'image': product.image.url if product.image else None,
+                    'image': image_url,
                     'stock_quantity': product.stock_quantity,
                     'category': product.category.name if product.category else None
                 })
@@ -181,11 +185,15 @@ class RecommendationsView(APIView):
             products = Product.objects.filter(stock_quantity__gt=0)[:6]
             results = []
             for product in products:
+                image_url = None
+                if product.image:
+                    image_url = request.build_absolute_uri(product.image.url)
+                    
                 results.append({
                     'id': product.id,
                     'name': product.name,
                     'price': str(product.price),
-                    'image': product.image.url if product.image else None,
+                    'image': image_url,
                     'stock_quantity': product.stock_quantity
                 })
             return Response(results)

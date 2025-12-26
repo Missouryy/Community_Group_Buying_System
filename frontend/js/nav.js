@@ -81,7 +81,7 @@ window.navSystem = (function() {
 
     return `
       <nav class="navbar navbar-expand-lg nav-main sticky-top">
-        <div class="container-fluid">
+        <div class="container">
           <!-- 品牌区域 -->
           <a class="navbar-brand nav-brand" href="/index.html">
             <div class="nav-brand-icon">🏘️</div>

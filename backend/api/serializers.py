@@ -24,6 +24,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class GroupBuySerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
     class Meta:
         model = GroupBuy
         fields = '__all__'

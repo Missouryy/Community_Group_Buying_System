@@ -320,7 +320,11 @@
     };
     
     data.forEach(o => {
-      const badgeClass = o.status === 'awaiting_group_success' ? 'text-bg-warning' : (o.status === 'successful' || o.status === 'completed') ? 'text-bg-success' : 'text-bg-secondary';
+      let badgeClass = 'text-bg-secondary';
+      if (o.status === 'awaiting_group_success') badgeClass = 'text-bg-warning';
+      else if (o.status === 'successful' || o.status === 'completed') badgeClass = 'text-bg-success';
+      else if (o.status === 'pending_payment') badgeClass = 'text-bg-danger';
+
       const card = document.createElement('div');
       card.className = 'card shadow-sm';
       card.innerHTML = `
@@ -330,7 +334,7 @@
               <div class="fw-semibold me-2">订单 #${o.id}</div>
               <span class="badge ${badgeClass}">${statusMap[o.status] || o.status}</span>
             </div>
-            <div class="text-muted small">总价：${o.total_price}</div>
+            <div class="text-muted small">总价：¥${o.total_price}</div>
           </div>
           <div class="ms-3 d-flex gap-2">
             <button class="btn btn-outline-primary btn-sm" data-view-order="${o.id}">查看详情</button>
@@ -444,9 +448,27 @@
     const confirmBtn = e.target.closest('button[data-confirm]');
     if (confirmBtn) {
       const id = parseInt(confirmBtn.getAttribute('data-confirm'), 10);
-      window.api.fetchAPI(`/api/orders/${id}/confirm/`, { method: 'POST' }).then(res => {
-        if (res.ok) loadMyOrders();
-      });
+      confirmBtn.disabled = true;
+      const originalText = confirmBtn.innerText;
+      confirmBtn.innerText = '⏳';
+      
+      window.api.fetchAPI(`/api/orders/${id}/confirm/`, { method: 'POST' })
+        .then(async res => {
+          if (res.ok) {
+            window.location.reload();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.error || '确认收货失败');
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = originalText;
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('操作失败: ' + err.message);
+          confirmBtn.disabled = false;
+          confirmBtn.innerText = originalText;
+        });
     }
     const reviewBtn = e.target.closest('button[data-review]');
     if (reviewBtn) {
@@ -550,6 +572,7 @@
   let allGroupBuys = [];
   let currentFilter = 'all';
   let currentSort = 'time';
+  let searchKeyword = '';
   
   // 加载统计数据
   async function loadStats() {
@@ -684,10 +707,46 @@
     displayFilteredGroupBuys();
   };
   
+  // 搜索功能
+  window.searchGroupBuys = function(keyword) {
+    searchKeyword = keyword.trim();
+    
+    // 显示或隐藏清除按钮
+    const clearBtn = document.getElementById('clear-search');
+    if (clearBtn) {
+      clearBtn.style.display = searchKeyword ? 'block' : 'none';
+    }
+    
+    displayFilteredGroupBuys();
+  };
+  
+  window.clearSearch = function() {
+    searchKeyword = '';
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    const clearBtn = document.getElementById('clear-search');
+    if (clearBtn) {
+      clearBtn.style.display = 'none';
+    }
+    displayFilteredGroupBuys();
+  };
+  
   function displayFilteredGroupBuys() {
     let filtered = [...allGroupBuys];
     
-    // 应用过滤
+    // 应用搜索
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase();
+      filtered = filtered.filter(g => {
+        const productName = (g.product_name || g.product || '').toLowerCase();
+        const leaderName = (g.leader_name || '').toLowerCase();
+        return productName.includes(keyword) || leaderName.includes(keyword);
+      });
+    }
+    
+    // 应用分类过滤
     if (currentFilter !== 'all') {
       filtered = filtered.filter(g => {
         const category = (g.category || '').toLowerCase();
@@ -987,6 +1046,18 @@
                           ${order.payment_method ? `<div class="col-md-4"><div><strong>支付方式：</strong>${order.payment_method === 'wechat' ? '微信支付' : order.payment_method === 'alipay' ? '支付宝' : order.payment_method}</div></div>` : ''}
                           ${order.payment_time ? `<div class="col-md-4"><div><strong>支付时间：</strong>${new Date(order.payment_time).toLocaleString('zh-CN')}</div></div>` : ''}
                         </div>
+                        ${order.payment_status === 'pending' ? `
+                          <div class="mt-3 pt-3 border-top">
+                            <div class="d-flex gap-2">
+                              <button class="btn btn-success" id="pay-wechat-${order.id}" data-order-id="${order.id}" data-payment-method="wechat">
+                                <span class="me-1">💬</span> 微信支付
+                              </button>
+                              <button class="btn btn-primary" id="pay-alipay-${order.id}" data-order-id="${order.id}" data-payment-method="alipay">
+                                <span class="me-1">💰</span> 支付宝支付
+                              </button>
+                            </div>
+                          </div>
+                        ` : ''}
                       </div>
                     </div>
                   </div>
@@ -994,15 +1065,44 @@
               </div>
             </div>
             <div class="modal-footer">
-              ${order.status === 'successful' || order.status === 'ready_for_pickup' ? `<button class="btn btn-primary" data-confirm="${order.id}" onclick="this.closest('.modal').querySelector('[data-bs-dismiss]').click(); document.querySelector('[data-confirm=\\'${order.id}\\']').click();">确认收货</button>` : ''}
+              ${order.status === 'successful' || order.status === 'ready_for_pickup' ? `<button class="btn btn-primary" data-confirm="${order.id}">确认收货</button>` : ''}
               <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
             </div>
           </div>
         </div>
       `;
       
+      
       document.body.appendChild(modal);
       const bsModal = new bootstrap.Modal(modal);
+      
+      // 为支付按钮添加事件监听
+      modal.addEventListener('click', async (e) => {
+        const paymentBtn = e.target.closest('[data-order-id][data-payment-method]');
+        if (paymentBtn) {
+          const orderId = parseInt(paymentBtn.getAttribute('data-order-id'));
+          const method = paymentBtn.getAttribute('data-payment-method');
+          
+          // 禁用按钮并显示加载状态
+          paymentBtn.disabled = true;
+          const originalHTML = paymentBtn.innerHTML;
+          paymentBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>处理中...';
+          
+          try {
+            // 关闭详情弹窗
+            bsModal.hide();
+            
+            // 调用支付流程
+            await window.payment.initiatePayment(orderId, method);
+          } catch (error) {
+            console.error('支付失败:', error);
+            alert('支付失败: ' + error.message);
+            paymentBtn.disabled = false;
+            paymentBtn.innerHTML = originalHTML;
+          }
+        }
+      });
+      
       bsModal.show();
       modal.addEventListener('hidden.bs.modal', () => modal.remove());
     } catch (error) {

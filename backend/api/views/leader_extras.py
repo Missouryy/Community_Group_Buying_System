@@ -77,22 +77,24 @@ class LeaderPickupsView(APIView):
             # 获取需要提货的订单
             pickup_orders = Order.objects.filter(
                 group_buy__leader=leader,
-                status__in=['successful', 'ready_for_pickup', 'picked_up']
-            ).select_related('user', 'group_buy__product').order_by('-created_at')
+                status__in=['successful', 'ready_for_pickup', 'pending_payment', 'completed']
+            ).select_related('user', 'group_buy__product').prefetch_related('items').order_by('-created_at')
             
             results = []
             for order in pickup_orders:
+                # 计算总数量
+                total_quantity = sum(item.quantity for item in order.items.all())
                 results.append({
                     'order_id': order.id,
                     'user_name': order.user.real_name or order.user.username,
                     'user_phone': getattr(order.user, 'phone', ''),
                     'user_id': order.user.id,
                     'product_name': order.group_buy.product.name if order.group_buy.product else '未知商品',
-                    'quantity': order.quantity,
+                    'quantity': total_quantity or order.quantity,  # 优先使用计算值
                     'total_price': str(order.total_price),
                     'status': order.status,
                     'pickup_address': getattr(order, 'pickup_address', ''),
-                    'pickup_time': order.updated_at.isoformat() if order.status == 'picked_up' else None
+                    'pickup_time': order.updated_at.isoformat() if order.status == 'completed' else None
                 })
             
             return Response(results)
@@ -129,18 +131,26 @@ class LeaderCommissionsSummaryView(APIView):
             )
             pending_earnings = sum((order.total_price * commission_rate) for order in pending_orders) if pending_orders.exists() else Decimal('0')
             
+            # 本月流水和订单数
+            monthly_sales = sum(order.total_price for order in monthly_orders) if monthly_orders.exists() else Decimal('0')
+            monthly_order_count = monthly_orders.count()
+            
             return Response({
                 'total_earnings': f"{total_earnings:.2f}",
                 'monthly_earnings': f"{monthly_earnings:.2f}",
                 'pending_earnings': f"{pending_earnings:.2f}",
-                'commission_rate': 10  # 10%提成比例
+                'commission_rate': 10,  # 10%提成比例
+                'monthly_sales': f"{monthly_sales:.2f}",
+                'monthly_orders': monthly_order_count
             })
         except Exception as e:
             return Response({
                 'total_earnings': '0.00',
                 'monthly_earnings': '0.00',
                 'pending_earnings': '0.00',
-                'commission_rate': 10
+                'commission_rate': 10,
+                'monthly_sales': '0.00',
+                'monthly_orders': 0
             })
 
 

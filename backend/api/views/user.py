@@ -195,21 +195,29 @@ class OrderConfirmView(APIView):
         if order.status not in ('successful', 'ready_for_pickup'):
             return Response({'error': '订单当前状态不允许确认收货'}, status=status.HTTP_400_BAD_REQUEST)
 
-        order.status = 'completed'
-        order.save()
-
-        # 增加积分（示例：按总价取整累加）并自动升级会员
+        # 定义user变量
         user = request.user
-        user.loyalty_points = (user.loyalty_points or 0) + int(order.total_price)
-        # 自动匹配最高可达会员等级
-        candidates = MembershipTier.objects.all().order_by('points_required')
-        new_tier = None
-        for t in candidates:
-            if user.loyalty_points >= t.points_required:
-                new_tier = t
-        if new_tier:
-            user.membership_tier = new_tier
-        user.save()
+
+        # 检查支付状态
+        if getattr(order, 'payment_status', '') == 'paid':
+            order.status = 'completed'
+            order.save()
+
+            # 增加积分（示例：按总价取整累加）并自动升级会员
+            user.loyalty_points = (user.loyalty_points or 0) + int(order.total_price)
+            # 自动匹配最高可达会员等级
+            candidates = MembershipTier.objects.all().order_by('points_required')
+            new_tier = None
+            for t in candidates:
+                if user.loyalty_points >= t.points_required:
+                    new_tier = t
+            if new_tier:
+                user.membership_tier = new_tier
+            user.save()
+        else:
+            # 未支付则转为待支付，不加积分
+            order.status = 'pending_payment'
+            order.save()
 
         return Response({'ok': True, 'loyalty_points': user.loyalty_points, 'membership_tier': MembershipTierSerializer(user.membership_tier).data if user.membership_tier else None})
 
