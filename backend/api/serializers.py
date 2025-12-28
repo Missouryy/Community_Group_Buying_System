@@ -11,6 +11,34 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 
+class UserRegisterSerializer(serializers.ModelSerializer):
+    """用户注册序列化器"""
+    password = serializers.CharField(write_only=True, required=True, min_length=6)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+    
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("用户名已存在")
+        return value
+    
+    def validate_email(self, value):
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("邮箱已被注册")
+        return value
+    
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+        return user
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
